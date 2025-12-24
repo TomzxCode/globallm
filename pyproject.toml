@@ -1,0 +1,16 @@
+[project]
+name = "globallm"
+version = "0.1.0"
+description = "Scan GitHub to identify impactful libraries and contribute to their success"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pygithub>=2.8.1",
+]
+
+[project.scripts]
+globallm = "globallm.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
