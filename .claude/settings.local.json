@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(uv init:*)",
-      "Bash(uv add:*)"
+      "Bash(uv add:*)",
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run:*)"
     ]
   }
 }
