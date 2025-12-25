@@ -19,6 +19,7 @@ def discover(
     min_dependents: int = typer.Option(None, help="Minimum dependents"),
     max_results: int = typer.Option(20, help="Max results to return"),
     use_cache: bool = typer.Option(True, help="Use cache"),
+    library_only: bool = typer.Option(False, help="Only include libraries (filter out apps, docs, etc.)"),
 ) -> None:
     """Discover repositories by domain and language."""
     from globallm.scanner import GitHubScanner, Domain
@@ -38,6 +39,7 @@ def discover(
     rprint(f"  Language: {language or 'All'}")
     rprint(f"  Min stars: {min_stars:,}")
     rprint(f"  Min dependents: {min_dependents:,}")
+    rprint(f"  Library only: {library_only}")
 
     scanner = GitHubScanner(token, use_cache=use_cache)
 
@@ -55,6 +57,11 @@ def discover(
         language=language,
         max_results=max_results,
     )
+
+    # Apply library filtering if requested
+    if library_only:
+        results = scanner.filter_libraries(results)
+
     duration = time.time() - start_time
 
     rprint(f"\n[green]Found {len(results)} repositories in {duration:.1f}s[/green]")

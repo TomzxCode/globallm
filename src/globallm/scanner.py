@@ -347,6 +347,68 @@ class GitHubScanner:
             logger.error("user_analysis_failed", username=username, error=str(e))
             raise
 
+    def is_library(self, repo: Repository) -> bool:
+        """Check if a repository is a library (vs application, documentation, etc.).
+
+        Returns True if the repo appears to be a library/package.
+        """
+        # Filter out "awesome" lists and documentation repos
+        if "awesome" in repo.name.lower():
+            return False
+        if "doc" in repo.name.lower() and repo.name.lower().startswith("doc"):
+            return False
+
+        # Filter out language runtimes
+        language_runtimes = [
+            "python/cpython",
+            "golang/go",
+            "rust-lang/rust",
+            "nodejs/node",
+            "ruby/ruby",
+            "php/php-src",
+        ]
+        if repo.full_name.lower() in [r.lower() for r in language_runtimes]:
+            return False
+
+        # Check description for library indicators
+        desc = (repo.description or "").lower()
+        library_keywords = ["library", "package", "framework", "sdk", "api", "toolkit"]
+        app_keywords = ["application", "app for", "web app", "mobile app"]
+
+        # If description suggests it's an app, filter it out
+        for keyword in app_keywords:
+            if keyword in desc:
+                return False
+
+        # If description suggests it's a library, keep it
+        for keyword in library_keywords:
+            if keyword in desc:
+                return True
+
+        # Default: keep if it has reasonable package indicators
+        # (this is a heuristic - could be improved by checking for package files)
+        return True
+
+    def filter_libraries(self, results: list[RepoMetrics]) -> list[RepoMetrics]:
+        """Filter results to only include libraries."""
+        logger.info("filtering_libraries", total=len(results))
+
+        filtered = []
+        for metrics in results:
+            try:
+                repo = self.github.get_repo(metrics.name)
+                if self.is_library(repo):
+                    filtered.append(metrics)
+                else:
+                    logger.debug("filtered_non_library", repo=metrics.name)
+            except GithubException as e:
+                logger.warning("filter_check_failed", repo=metrics.name, error=str(e))
+                # Keep it if we can't check
+                filtered.append(metrics)
+
+        logger.info("libraries_filtered", kept=len(filtered), removed=len(results) - len(filtered))
+        return filtered
+
     def _calculate_metrics(self, repo: Repository) -> RepoMetrics:
         """Calculate impact score for a repository."""
         # Weighted score formula
