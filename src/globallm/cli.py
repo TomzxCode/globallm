@@ -49,6 +49,12 @@ def parse_args() -> argparse.Namespace:
         default="INFO",
         help="Set logging level (default: INFO)",
     )
+    parser.add_argument(
+        "--no-cache", action="store_true", help="Disable cache for this run"
+    )
+    parser.add_argument(
+        "--clear-cache", action="store_true", help="Clear the cache and exit"
+    )
     return parser.parse_args()
 
 
@@ -67,14 +73,23 @@ def run(args: argparse.Namespace) -> None:
             "No GITHUB_TOKEN found - using unauthenticated API (rate limited)"
         )
 
+    # Handle --clear-cache: initialize scanner, clear cache, and exit
+    if args.clear_cache:
+        scanner = GitHubScanner(token)
+        scanner.clear_cache()
+        print("Cache cleared.")
+        return
+
+    use_cache = not args.no_cache
     logger.info(
         "initializing_scanner",
         domain=args.domain,
         language=args.language,
         max_results=args.max_results,
+        use_cache=use_cache,
     )
 
-    scanner = GitHubScanner(token)
+    scanner = GitHubScanner(token, use_cache=use_cache)
 
     domain = Domain(args.domain)
 
