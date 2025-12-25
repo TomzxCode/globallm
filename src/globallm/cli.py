@@ -3,6 +3,8 @@
 import os
 import argparse
 import time
+
+from dotenv import load_dotenv
 from globallm.scanner import GitHubScanner, Domain
 from globallm.logging_config import configure_logging, get_logger
 
@@ -11,6 +13,7 @@ logger = get_logger(__name__)
 
 def main() -> None:
     """Run the GitHub scanner CLI."""
+    load_dotenv()
     configure_logging()
 
     parser = argparse.ArgumentParser(
