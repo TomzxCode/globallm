@@ -68,6 +68,7 @@ from . import (  # noqa: E402
     issues,
     prioritize,
     fix,
+    user,
 )
 
 app.add_typer(discover.app)
@@ -77,6 +78,7 @@ app.add_typer(status.app)
 app.add_typer(issues.app)
 app.add_typer(prioritize.app)
 app.add_typer(fix.app)
+app.add_typer(user.app)
 
 from . import config, budget  # noqa: E402
 

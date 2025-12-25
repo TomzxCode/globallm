@@ -269,6 +269,84 @@ class GitHubScanner:
         logger.debug("domain_search_query", domain=domain.value, query=query)
         return self.search_repos(query, sort, order, max_results)
 
+    def analyze_user_repos(
+        self,
+        username: str,
+        min_stars: int = 0,
+        include_forks: bool = False,
+        max_results: int = 100,
+    ) -> list[RepoMetrics]:
+        """Analyze all repositories owned by a user.
+
+        Args:
+            username: GitHub username
+            min_stars: Minimum star count to include
+            include_forks: Whether to include forked repositories
+            max_results: Maximum results to return
+
+        Returns:
+            List of RepoMetrics for the user's repositories, sorted by score
+        """
+        logger.info(
+            "analyzing_user_repos",
+            username=username,
+            min_stars=min_stars,
+            include_forks=include_forks,
+        )
+
+        try:
+            user = self.github.get_user(username)
+            repos = user.get_repos()
+
+            results: list[RepoMetrics] = []
+
+            for repo in repos[:max_results]:
+                # Skip forks if not requested
+                if not include_forks and repo.fork:
+                    logger.debug("skipping_fork", repo=repo.full_name)
+                    continue
+
+                # Skip if below star threshold
+                if repo.stargazers_count < min_stars:
+                    logger.debug(
+                        "skipping_low_stars",
+                        repo=repo.full_name,
+                        stars=repo.stargazers_count,
+                    )
+                    continue
+
+                try:
+                    metrics = self._calculate_metrics(repo)
+                    results.append(metrics)
+                    logger.debug(
+                        "repo_analyzed",
+                        name=repo.full_name,
+                        stars=metrics.stars,
+                        score=f"{metrics.score:.1f}",
+                    )
+                except GithubException as e:
+                    logger.warning(
+                        "repo_analysis_failed",
+                        repo=repo.full_name,
+                        error=str(e),
+                    )
+                    continue
+
+            # Sort by score (impact)
+            results = sorted(results, key=lambda r: r.score, reverse=True)
+
+            logger.info(
+                "user_repos_analyzed",
+                username=username,
+                total_found=len(results),
+            )
+
+            return results
+
+        except GithubException as e:
+            logger.error("user_analysis_failed", username=username, error=str(e))
+            raise
+
     def _calculate_metrics(self, repo: Repository) -> RepoMetrics:
         """Calculate impact score for a repository."""
         # Weighted score formula
