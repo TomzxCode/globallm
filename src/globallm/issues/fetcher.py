@@ -45,7 +45,7 @@ class IssueFetcher:
 
         try:
             # Build query
-            query = f"repo:{repo_name} state:{state}"
+            query = f"repo:{repo_name} is:issue state:{state}"
             if labels:
                 query += " " + " ".join(f"label:{label}" for label in labels)
 

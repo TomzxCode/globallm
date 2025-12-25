@@ -21,6 +21,8 @@ def issues(
     from globallm.models.issue import IssueCategory
     import os
 
+    from github import Github
+
     token = os.getenv("GITHUB_TOKEN")
 
     rprint(f"[bold cyan]Fetching issues from {repo}...[/bold cyan]")
@@ -32,8 +34,9 @@ def issues(
         raise typer.Exit(1)
 
     # Fetch issues
-    fetcher = IssueFetcher(token)
-    issues = fetcher.fetch_issues(repo, state=state, limit=limit)
+    github_client = Github(token)
+    fetcher = IssueFetcher(github_client)
+    issues = fetcher.fetch_repo_issues(repo, state=state, limit=limit)
 
     # Analyze issues if we have an LLM configured
     if os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"):
