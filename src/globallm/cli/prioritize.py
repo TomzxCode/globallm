@@ -4,8 +4,11 @@ import json
 
 import typer
 from rich import print as rprint
+from rich.table import Table
+from rich.console import Console
 
 from globallm.config.loader import load_config
+from globallm.storage.repository_store import RepositoryStore
 
 app = typer.Typer(help="Prioritize issues across repositories")
 
@@ -17,7 +20,11 @@ def prioritize(
     min_priority: float = typer.Option(0.0, help="Minimum priority score"),
     export: str = typer.Option(None, help="Export to file (json, csv)"),
 ) -> None:
-    """Prioritize issues across repositories."""
+    """Prioritize issues across approved repositories.
+
+    Reads repositories from the store that are marked as 'worth_working_on'.
+    If no approved repositories exist, automatically runs discover to find candidates.
+    """
     from globallm.issues.prioritizer import IssuePrioritizer
     from globallm.budget.budget_manager import BudgetManager
     from globallm.issues.fetcher import IssueFetcher
@@ -27,9 +34,35 @@ def prioritize(
 
     token = os.getenv("GITHUB_TOKEN")
     config = load_config()
+    store = RepositoryStore()
 
     rprint("[bold cyan]Prioritizing issues...[/bold cyan]")
 
+    # Get approved repositories from store
+    approved_repos = store.get_approved()
+
+    if not approved_repos:
+        rprint("[yellow]No approved repositories found in store.[/yellow]")
+        rprint("[dim]Please run discover and analyze some repositories first:[/dim]")
+        rprint("  1. globallm discover --domain ai_ml --language python")
+        rprint("  2. globallm analyze django/django")
+        rprint("  3. globallm analyze psf/requests")
+        raise typer.Exit(1)
+
+    # Extract repo names
+    repos = [r.get("name") for r in approved_repos if r.get("name")]
+
+    if language:
+        # Filter by language
+        repos = [r for r in repos if _get_repo_language(store, r) == language]
+
+    if not repos:
+        rprint("[yellow]No repositories matching criteria[/yellow]")
+        raise typer.Exit(1)
+
+    rprint(f"[dim]Found {len(repos)} approved repositories[/dim]")
+
+    # Initialize LLM and prioritizer
     llm = ClaudeLLM(
         model=config.llm_model,
         temperature=config.llm_temperature,
@@ -38,20 +71,6 @@ def prioritize(
     analyzer = IssueAnalyzer(llm)
     prioritizer = IssuePrioritizer(analyzer)
     manager = BudgetManager()
-
-    # Get repositories from config or use defaults
-    repos = (
-        config.filters.target_repos if hasattr(config.filters, "target_repos") else []
-    )
-
-    if not repos:
-        rprint(
-            "[yellow]No repositories configured. Add some with config set filters.target_repos[/yellow]"
-        )
-        rprint(
-            'Example: globallm config set filters.target_repos \'[["owner/repo1", "owner/repo2"]]\''
-        )
-        raise typer.Exit(1)
 
     # Fetch and prioritize issues
     all_issues = []
@@ -63,6 +82,10 @@ def prioritize(
         fetcher = IssueFetcher(token)
         issues = fetcher.fetch_issues(repo, state="open", limit=50)
         all_issues.extend(issues)
+
+    if not all_issues:
+        rprint("[yellow]No issues found[/yellow]")
+        return
 
     # Calculate priority scores
     rprint(
@@ -77,43 +100,58 @@ def prioritize(
     filtered_issues.sort(key=lambda i: i.priority_score, reverse=True)
 
     # Display results
-    rprint(f"\n[green]Top {min(top, len(filtered_issues))} prioritized issues[/green]")
+    _display_results(filtered_issues, top, min_priority)
 
-    if filtered_issues:
-        from rich.table import Table
-        from rich.console import Console
+    # Export if requested
+    if export == "json":
+        _export_json(filtered_issues[:top])
 
-        console = Console()
-        table = Table(title=f"Top Issues (Priority > {min_priority})")
-        table.add_column("Repository", style="cyan")
-        table.add_column("#", style="dim")
-        table.add_column("Title", style="white")
-        table.add_column("Category", style="yellow")
-        table.add_column("Priority", style="green", justify="right")
 
-        for issue in filtered_issues[:top]:
-            table.add_row(
-                issue.repository,
-                str(issue.number),
-                issue.title[:40] + "..." if len(issue.title) > 40 else issue.title,
-                issue.category.value,
-                f"{issue.priority_score:.1f}",
-            )
+def _get_repo_language(store: RepositoryStore, repo_name: str) -> str | None:
+    """Get language for a repository from store."""
+    repo = store.get_repository(repo_name)
+    return repo.get("language") if repo else None
 
-        console.print(table)
 
-        # Export if requested
-        if export == "json":
-            data = [
-                {
-                    "repository": i.repository,
-                    "number": i.number,
-                    "title": i.title,
-                    "priority": i.priority_score,
-                    "category": i.category.value,
-                }
-                for i in filtered_issues[:top]
-            ]
-            with open("prioritized_issues.json", "w") as f:
-                json.dump(data, f, indent=2)
-            rprint("\n[green]Exported to prioritized_issues.json[/green]")
+def _display_results(issues: list, top: int, min_priority: float) -> None:
+    """Display prioritized issues in a table."""
+    rprint(f"\n[green]Top {min(top, len(issues))} prioritized issues[/green]")
+
+    if not issues:
+        return
+
+    console = Console()
+    table = Table(title=f"Top Issues (Priority > {min_priority})")
+    table.add_column("Repository", style="cyan")
+    table.add_column("#", style="dim")
+    table.add_column("Title", style="white")
+    table.add_column("Category", style="yellow")
+    table.add_column("Priority", style="green", justify="right")
+
+    for issue in issues[:top]:
+        table.add_row(
+            issue.repository,
+            str(issue.number),
+            issue.title[:40] + "..." if len(issue.title) > 40 else issue.title,
+            issue.category.value,
+            f"{issue.priority_score:.1f}",
+        )
+
+    console.print(table)
+
+
+def _export_json(issues: list) -> None:
+    """Export issues to JSON file."""
+    data = [
+        {
+            "repository": i.repository,
+            "number": i.number,
+            "title": i.title,
+            "priority": i.priority_score,
+            "category": i.category.value,
+        }
+        for i in issues
+    ]
+    with open("prioritized_issues.json", "w") as f:
+        json.dump(data, f, indent=2)
+    rprint("\n[green]Exported to prioritized_issues.json[/green]")

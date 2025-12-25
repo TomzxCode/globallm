@@ -83,15 +83,18 @@ flowchart TD
 
     subgraph Discovery ["Find Repositories"]
         Discover --> DiscoverCmd["globallm discover<br/>--domain <domain><br/>--language <lang>"]
-        DiscoverCmd --> Analyze[Analyze]
+        DiscoverCmd --> Store["Repos saved to store"]
+        Store --> Analyze[Analyze]
     end
 
     subgraph Analysis ["Analyze Repositories"]
-        Analyze --> AnalyzeCmd["globallm analyze <repo><br/>--include-dependents"]
-        AnalyzeCmd --> AnalyzeUser{Analyze User?}
-        AnalyzeUser -->|Yes| UserCmd["globallm analyze-user <username>"]
-        AnalyzeUser -->|No| Redundancy
-        UserCmd --> Redundancy[Redundancy Check]
+        Analyze --> AnalyzeCmd["globallm analyze <repo>"]
+        AnalyzeCmd --> Calculate["Auto-calculate<br/>worth_working_on"]
+        Calculate --> StoreUpdate["Update store"]
+        StoreUpdate --> ShowRepos{Show repos?}
+        ShowRepos -->|Yes| ReposCmd["globallm repos list<br/>--filter approved"]
+        ShowRepos -->|No| Redundancy
+        ReposCmd --> Redundancy[Redundancy Check]
     end
 
     subgraph Redundancy ["Detect Duplicates"]
@@ -105,7 +108,7 @@ flowchart TD
     end
 
     subgraph Prioritize ["Prioritize Issues"]
-        Prioritize --> PrioritizeCmd["globallm prioritize<br/>--language <lang><br/>--top <N><br/>--min-priority <score>"]
+        Prioritize --> PrioritizeCmd["globallm prioritize<br/>--reads approved repos<br/>from store"]
         PrioritizeCmd --> Fix{Fix Issue?}
     end
 
@@ -126,10 +129,12 @@ flowchart TD
     classDef monitor fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
 
     class ConfigShow,ConfigSet,BudgetShow setup
-    class DiscoverCmd,AnalyzeCmd,UserCmd,RedundancyCmd primary
+    class DiscoverCmd,AnalyzeCmd,ReposCmd,RedundancyCmd primary
     class IssuesCmd,PrioritizeCmd,FixCmd action
     class StatusCmd monitor
 ```
+
+> **Note**: Discovered repositories are automatically stored in `~/.local/share/globallm/repositories.yaml`. The `analyze` command calculates `worth_working_on` based on health and impact scores (health > 0.5 AND impact > 0.5). The `prioritize` command reads only approved repos from the store.
 
 ### Configuration Management
 
@@ -161,10 +166,10 @@ globallm budget reset
 
 ### Discover Repositories
 
-Search GitHub for high-impact repositories by domain and language. Uses curated queries to find libraries where contributions will have the most downstream impact.
+Search GitHub for high-impact repositories by domain and language. Uses curated queries to find libraries where contributions will have the most downstream impact. Results are automatically saved to the repository store.
 
 ```bash
-# Discover Python AI/ML libraries
+# Discover Python AI/ML libraries (auto-saves to store)
 globallm discover --domain ai_ml --language python --max-results 20
 
 # Discover with minimum star and dependent filters
@@ -179,14 +184,41 @@ globallm discover --domain data_science --language python --library-only
 
 ### Analyze a Repository
 
-Deep-dive into a specific repository's health, impact metrics, and dependency graph. Use this to evaluate whether a project is worth contributing to.
+Deep-dive into a specific repository's health and impact metrics. Automatically calculates whether the repository is worth working on and updates the repository store.
 
 ```bash
-# Basic repository analysis
-globallm analyze octocat/Hello-World
+# Analyze a repository (auto-calculates worth_working_on)
+globallm analyze django/django
 
-# Include dependent analysis (calculates downstream impact)
-globallm analyze --include-dependents tensorflow/tensorflow
+# The analysis will show:
+# - Health Score (0-100%)
+# - Impact Score (0-100%)
+# - Whether it's worth working on (✓ or ✗)
+# - Analysis reason
+```
+
+### Manage Stored Repositories
+
+List and manage repositories in the store. Filter by analysis status.
+
+```bash
+# List all stored repositories
+globallm repos list
+
+# Show only approved repositories (worth_working_on=true)
+globallm repos list --filter approved
+
+# Show rejected repositories
+globallm repos list --filter rejected
+
+# Show unanalyzed repositories
+globallm repos list --filter unanalyzed
+
+# Show detailed information about a specific repository
+globallm repos show django/django
+
+# Remove a repository from the store
+globallm repos remove some/repo
 ```
 
 ### Detect Redundancy
@@ -243,8 +275,10 @@ globallm issues --category bug --sort priority octocat/Hello-World
 
 Rank issues across all repositories using a multi-factor scoring algorithm that considers health, impact, solvability, urgency, and redundancy. This identifies the highest-value work.
 
+> Reads from the repository store (approved repos only). Run `discover` and `analyze` first to populate the store.
+
 ```bash
-# Show top 20 priority issues across all repositories
+# Show top 20 priority issues across approved repositories
 globallm prioritize
 
 # Filter by language
@@ -255,7 +289,6 @@ globallm prioritize --top 50 --min-priority 0.5
 
 # Export to file
 globallm prioritize --export json > priorities.json
-globallm prioritize --export csv > priorities.csv
 ```
 
 ### Fix Issues

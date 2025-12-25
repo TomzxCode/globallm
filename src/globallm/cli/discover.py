@@ -1,12 +1,14 @@
 """Discover command."""
 
 import time
+from datetime import datetime
 
 import typer
 from rich import print as rprint
 
 from globallm.cli.common import _display_results
 from globallm.config.loader import load_config
+from globallm.storage.repository_store import RepositoryStore
 
 app = typer.Typer(help="Discover repositories by domain and language")
 
@@ -21,12 +23,16 @@ def discover(
     use_cache: bool = typer.Option(True, help="Use cache"),
     library_only: bool = typer.Option(False, help="Only include libraries (filter out apps, docs, etc.)"),
 ) -> None:
-    """Discover repositories by domain and language."""
+    """Discover repositories by domain and language.
+
+    Results are automatically saved to the repository store for later analysis.
+    """
     from globallm.scanner import GitHubScanner, Domain
     import os
 
     config = load_config()
     token = os.getenv("GITHUB_TOKEN")
+    store = RepositoryStore()
 
     # Apply config filters if CLI args not specified
     if min_stars is None:
@@ -66,3 +72,43 @@ def discover(
 
     rprint(f"\n[green]Found {len(results)} repositories in {duration:.1f}s[/green]")
     _display_results(results)
+
+    # Auto-save to repository store
+    _save_to_store(store, results, rprint)
+
+
+def _save_to_store(store: RepositoryStore, results: list, rprint) -> None:
+    """Save discovered repositories to store, merging with existing.
+
+    Existing repos that have been analyzed (worth_working_on is set) are preserved.
+    """
+    existing_repos = store.load_repositories()
+
+    # Convert RepoMetrics to dict and merge with existing data
+    to_save = list(existing_repos)  # Start with existing
+    new_count = 0
+
+    for repo in results:
+        repo_dict = repo.to_dict()
+        name = repo_dict["name"]
+
+        # Check if already exists
+        existing = next((r for r in to_save if r.get("name") == name), None)
+
+        if existing:
+            # Preserve analysis fields if they exist
+            if existing.get("worth_working_on") is not None:
+                # Keep analyzed repo as-is
+                continue
+            else:
+                # Update unanalyzed repo with new data
+                existing.update(repo_dict)
+        else:
+            # Add new repo
+            repo_dict["worth_working_on"] = None  # Not yet analyzed
+            to_save.append(repo_dict)
+            new_count += 1
+
+    store.save_repositories(to_save, discovered_at=datetime.now())
+
+    rprint(f"[dim]→ Saved {len(to_save)} repositories to store ({new_count} new)[/dim]")

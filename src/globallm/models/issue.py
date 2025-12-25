@@ -166,6 +166,20 @@ class Issue:
         if not isinstance(issue, GithubIssue):
             raise TypeError(f"Expected GithubIssue, got {type(issue)}")
 
+        # The reactions property returns a dict with aggregated counts from the GitHub API
+        # e.g., {"+1": 10, "-1": 0, "laugh": 3, "total_count": 15, "url": "..."}
+        # We filter to only include reaction types with positive counts
+        reactions = {}
+        if hasattr(issue, "reactions") and issue.reactions:
+            raw_reactions = issue.reactions
+            if isinstance(raw_reactions, dict):
+                # Skip non-reaction keys like "url" and "total_count"
+                reaction_keys = {"+1", "-1", "laugh", "hooray", "confused", "eyes", "rocket", "heart"}
+                reactions = {
+                    k: v for k, v in raw_reactions.items()
+                    if k in reaction_keys and isinstance(v, int) and v > 0
+                }
+
         return cls(
             number=issue.number,
             title=issue.title,
@@ -178,10 +192,6 @@ class Issue:
             labels=[label.name for label in issue.labels],
             assignees=[a.login for a in issue.assignees],
             comments_count=issue.comments,
-            reactions={
-                reaction.content: reaction.count for reaction in issue.get_reactions()
-            }
-            if hasattr(issue, "get_reactions")
-            else {},
+            reactions=reactions,
             category=IssueCategory.from_labels([label.name for label in issue.labels]),
         )

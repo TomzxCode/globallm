@@ -6,7 +6,7 @@ import typer
 from rich import print as rprint
 from rich.table import Table
 
-from globallm.config.loader import load_config
+from globallm.scanner import RepoMetrics
 
 app = typer.Typer(help="Analyze user repositories")
 
@@ -23,7 +23,6 @@ def analyze_user(
     from globallm.scanner import GitHubScanner
     import os
 
-    config = load_config()
     token = os.getenv("GITHUB_TOKEN")
 
     rprint(f"[bold cyan]Analyzing repositories for {username}...[/bold cyan]")
@@ -80,7 +79,7 @@ def analyze_user(
         _print_summary(results, username)
 
 
-def _get_recommendation(repo: "RepoMetrics") -> str:
+def _get_recommendation(repo: RepoMetrics) -> str:
     """Get keep/archive recommendation for a repository."""
     # Archive if low impact
     if repo.stars < 100 and repo.forks < 10:

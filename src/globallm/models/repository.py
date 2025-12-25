@@ -1,8 +1,9 @@
 """Repository-related data models."""
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 
 class Language(Enum):
@@ -118,6 +119,11 @@ class Repository:
     archived: bool = False
     default_branch: str = "main"
 
+    # Analysis fields
+    worth_working_on: bool | None = None  # Set after analysis
+    analyzed_at: datetime | None = None  # When analysis was performed
+    analysis_reason: str | None = None  # Explanation of the decision
+
     @property
     def impact_score(self) -> float:
         """Calculate dependency-graph-based impact score."""
@@ -126,6 +132,63 @@ class Repository:
             + self.forks * 2.0
             + self.subscribers * 5.0
             + self.dependents * 10.0  # Dependents weighted highest
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for YAML serialization."""
+        d = asdict(self)
+        # Convert HealthScore to dict
+        if isinstance(d.get("health_score"), dict):
+            # Already converted by asdict
+            pass
+        elif self.health_score is not None:
+            d["health_score"] = asdict(self.health_score)
+        # Convert Language enum to string
+        if self.language is not None:
+            d["language"] = self.language.value
+        # Convert datetime to ISO format
+        if self.last_commit_at is not None:
+            d["last_commit_at"] = self.last_commit_at.isoformat()
+        if self.analyzed_at is not None:
+            d["analyzed_at"] = self.analyzed_at.isoformat()
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Repository":
+        """Create from dictionary for YAML deserialization."""
+        # Handle health_score dict conversion
+        health_score_data = data.pop("health_score", None)
+        if isinstance(health_score_data, dict):
+            health_score = HealthScore(**health_score_data)
+        else:
+            health_score = health_score_data
+
+        # Handle Language string to enum conversion
+        language_str = data.pop("language", None)
+        if language_str is not None:
+            language = Language.from_string(language_str)
+        else:
+            language = None
+
+        # Handle datetime parsing
+        last_commit_at_str = data.pop("last_commit_at", None)
+        if last_commit_at_str:
+            last_commit_at = datetime.fromisoformat(last_commit_at_str)
+        else:
+            last_commit_at = None
+
+        analyzed_at_str = data.pop("analyzed_at", None)
+        if analyzed_at_str:
+            analyzed_at = datetime.fromisoformat(analyzed_at_str)
+        else:
+            analyzed_at = None
+
+        return cls(
+            health_score=health_score,
+            language=language,
+            last_commit_at=last_commit_at,
+            analyzed_at=analyzed_at,
+            **data,
         )
 
 
