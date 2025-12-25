@@ -30,9 +30,11 @@ def prioritize(
     from globallm.issues.fetcher import IssueFetcher
     from globallm.issues.analyzer import IssueAnalyzer
     from globallm.llm.claude import ClaudeLLM
+    from github import Github
     import os
 
     token = os.getenv("GITHUB_TOKEN")
+    github_client = Github(token)
     config = load_config()
     store = RepositoryStore()
 
@@ -79,8 +81,8 @@ def prioritize(
             rprint(f"[yellow]Skipping {repo} - budget limit[/yellow]")
             continue
 
-        fetcher = IssueFetcher(token)
-        issues = fetcher.fetch_issues(repo, state="open", limit=50)
+        fetcher = IssueFetcher(github_client)
+        issues = fetcher.fetch_repo_issues(repo, state="open", limit=50)
         all_issues.extend(issues)
 
     if not all_issues:
