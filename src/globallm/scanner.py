@@ -370,6 +370,61 @@ class GitHubScanner:
         if repo.full_name.lower() in [r.lower() for r in language_runtimes]:
             return False
 
+        # Check for package manifest files - strong indicator of a library
+        package_files = [
+            "pyproject.toml",  # Python
+            "setup.py",  # Python
+            "setup.cfg",  # Python
+            "package.json",  # npm/Node.js
+            "Cargo.toml",  # Rust
+            "go.mod",  # Go
+            "Gemfile",  # Ruby
+            "*.gemspec",  # Ruby
+            "composer.json",  # PHP
+            "pom.xml",  # Java/Maven
+            "build.gradle",  # Java/Gradle
+            "pubspec.yaml",  # Dart
+            "mix.exs",  # Elixir
+            "shard.yml",  # Crystal
+        ]
+
+        try:
+            # Get the default branch contents
+            default_branch = repo.default_branch
+            if not default_branch:
+                # Fallback to master or main
+                try:
+                    default_branch = repo.get_branch("master").name
+                except GithubException:
+                    try:
+                        default_branch = repo.get_branch("main").name
+                    except GithubException:
+                        pass
+
+            if default_branch:
+                tree = repo.get_git_tree(f"heads/{default_branch}", recursive=False)
+                for item in tree.tree:
+                    for package_file in package_files:
+                        # Handle wildcards (e.g., *.gemspec)
+                        if "*" in package_file:
+                            pattern = package_file.replace("*", "")
+                            if item.path.endswith(pattern):
+                                logger.debug(
+                                    "found_package_file",
+                                    repo=repo.full_name,
+                                    file=item.path,
+                                )
+                                return True
+                        elif item.path == package_file:
+                            logger.debug(
+                                "found_package_file",
+                                repo=repo.full_name,
+                                file=item.path,
+                            )
+                            return True
+        except GithubException as e:
+            logger.debug("package_file_check_failed", repo=repo.full_name, error=str(e))
+
         # Check description for library indicators
         desc = (repo.description or "").lower()
         library_keywords = ["library", "package", "framework", "sdk", "api", "toolkit"]
@@ -385,8 +440,14 @@ class GitHubScanner:
             if keyword in desc:
                 return True
 
-        # Default: keep if it has reasonable package indicators
-        # (this is a heuristic - could be improved by checking for package files)
+        # Check GitHub topics for library indicators
+        topics = repo.get_topics()
+        library_topics = ["library", "package", "framework", "sdk", "api"]
+        for topic in topics:
+            if topic.lower() in library_topics:
+                return True
+
+        # Default: keep if no strong evidence against
         return True
 
     def filter_libraries(self, results: list[RepoMetrics]) -> list[RepoMetrics]:
