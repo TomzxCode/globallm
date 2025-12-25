@@ -2,11 +2,17 @@
 
 import os
 import argparse
+import time
 from globallm.scanner import GitHubScanner, Domain
+from globallm.logging_config import configure_logging, get_logger
+
+logger = get_logger(__name__)
 
 
 def main() -> None:
     """Run the GitHub scanner CLI."""
+    configure_logging()
+
     parser = argparse.ArgumentParser(
         description="Search GitHub for impactful repositories"
     )
@@ -21,14 +27,44 @@ def main() -> None:
     parser.add_argument(
         "--max-results", type=int, default=20, help="Max results to return"
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose logging"
+    )
 
     args = parser.parse_args()
+
+    if args.verbose:
+        logger.debug("Verbose mode enabled")
+
     token = os.getenv("GITHUB_TOKEN")
+    if token:
+        logger.debug("GitHub token found in environment")
+    else:
+        logger.warning(
+            "No GITHUB_TOKEN found - using unauthenticated API (rate limited)"
+        )
+
+    logger.info(
+        "initializing_scanner",
+        domain=args.domain,
+        language=args.language,
+        max_results=args.max_results,
+    )
+
     scanner = GitHubScanner(token)
 
     domain = Domain(args.domain)
+
+    start_time = time.time()
     results = scanner.search_by_domain(
         domain, language=args.language, max_results=args.max_results
+    )
+    duration = time.time() - start_time
+
+    logger.info(
+        "search_completed",
+        result_count=len(results),
+        duration_seconds=f"{duration:.2f}",
     )
 
     domain_label = domain.value.replace("_", " ").title()

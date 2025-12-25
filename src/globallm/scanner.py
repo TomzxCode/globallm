@@ -2,8 +2,12 @@
 
 from github import Github
 from github.Repository import Repository
+from github.GithubException import GithubException
 from dataclasses import dataclass
 from enum import Enum
+from globallm.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class Domain(Enum):
@@ -51,11 +55,28 @@ class GitHubScanner:
     def __init__(self, token: str | None = None) -> None:
         """Initialize scanner with optional GitHub token."""
         self.github = Github(token) if token else Github()
+        self.authenticated = bool(token)
+        if self.authenticated:
+            logger.debug("scanner_initialized", authenticated=True)
+        else:
+            logger.debug("scanner_initialized", authenticated=False)
 
     def analyze_repo(self, repo_name: str) -> RepoMetrics:
         """Analyze a single repository."""
-        repo = self.github.get_repo(repo_name)
-        return self._calculate_metrics(repo)
+        logger.debug("analyzing_repo", repo=repo_name)
+        try:
+            repo = self.github.get_repo(repo_name)
+            metrics = self._calculate_metrics(repo)
+            logger.debug(
+                "repo_analyzed",
+                repo=repo_name,
+                stars=metrics.stars,
+                score=f"{metrics.score:.1f}",
+            )
+            return metrics
+        except GithubException as e:
+            logger.error("repo_analysis_failed", repo=repo_name, error=str(e))
+            raise
 
     def search_repos(
         self,
@@ -65,12 +86,28 @@ class GitHubScanner:
         max_results: int = 100,
     ) -> list[RepoMetrics]:
         """Search repositories and return metrics."""
+        logger.info(
+            "searching_repos",
+            query=query,
+            sort=sort,
+            order=order,
+            max_results=max_results,
+        )
         repos = self.github.search_repositories(query=query, sort=sort, order=order)
         results: list[RepoMetrics] = []
 
         for repo in repos[:max_results]:
-            results.append(self._calculate_metrics(repo))
+            try:
+                results.append(self._calculate_metrics(repo))
+            except GithubException as e:
+                logger.warning(
+                    "repo_processing_failed",
+                    repo=repo.full_name,
+                    error=str(e),
+                )
+                continue
 
+        logger.debug("repos_processed", count=len(results))
         return sorted(results, key=lambda r: r.score, reverse=True)
 
     def search_by_domain(
@@ -86,6 +123,7 @@ class GitHubScanner:
         if language:
             lang_filter = f"language:{language}"
             query = f"{query} {lang_filter}" if query else lang_filter
+        logger.debug("domain_search_query", domain=domain.value, query=query)
         return self.search_repos(query, sort, order, max_results)
 
     def _calculate_metrics(self, repo: Repository) -> RepoMetrics:
