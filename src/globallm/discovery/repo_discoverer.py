@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
+from globallm.config.loader import load_config
 from globallm.discovery.package_registry import DependentFinder
 from globallm.filtering.health_scorer import HealthScorer
 from globallm.filtering.repo_filter import RepositoryFilter
@@ -41,7 +42,11 @@ class EnhancedDiscoverer(GitHubScanner):
         health_filter: bool = True,
     ) -> None:
         super().__init__(token)
-        self.dependent_finder = DependentFinder() if enable_dependent_lookup else None
+        # Load config to get libraries.io API key
+        config = load_config()
+        api_key = config.libraries_io_api_key
+
+        self.dependent_finder = DependentFinder(api_key=api_key) if enable_dependent_lookup else None
         self.health_scorer = HealthScorer()
         self.repo_filter = RepositoryFilter(self.health_scorer)
         self.enable_dependent_lookup = enable_dependent_lookup
