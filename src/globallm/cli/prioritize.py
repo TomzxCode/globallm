@@ -9,6 +9,7 @@ from rich.console import Console
 
 from globallm.config.loader import load_config
 from globallm.storage.repository_store import RepositoryStore
+from globallm.storage.issue_store import IssueStore
 
 app = typer.Typer(help="Prioritize issues across repositories")
 
@@ -37,6 +38,7 @@ def prioritize(
     github_client = Github(token)
     config = load_config()
     store = RepositoryStore()
+    issue_store = IssueStore()
 
     rprint("[bold cyan]Prioritizing issues...[/bold cyan]")
 
@@ -74,7 +76,7 @@ def prioritize(
     prioritizer = IssuePrioritizer(analyzer)
     manager = BudgetManager()
 
-    # Fetch and prioritize issues
+    # Fetch and prioritize issues per repository
     all_issues = []
     for repo in repos:
         if not manager.can_process_repo(repo):
@@ -83,19 +85,29 @@ def prioritize(
 
         fetcher = IssueFetcher(github_client)
         issues = fetcher.fetch_repo_issues(repo, state="open", limit=50)
-        all_issues.extend(issues)
+
+        rprint(f"[dim]Processing {len(issues)} issues from {repo}...[/dim]")
+        for issue in issues:
+            priority = prioritizer.calculate_priority(issue)
+            issue.priority_score = priority.overall
+
+            # Save to store immediately
+            issue_dict = {
+                "repository": issue.repository,
+                "number": issue.number,
+                "title": issue.title,
+                "priority": issue.priority_score,
+                "category": issue.category.value,
+                "priority_breakdown": priority.to_dict(),
+            }
+            issue_store.add_or_update(issue_dict)
+            all_issues.append(issue)
 
     if not all_issues:
         rprint("[yellow]No issues found[/yellow]")
         return
 
-    # Calculate priority scores
-    rprint(
-        f"\n[yellow]Calculating priority scores for {len(all_issues)} issues...[/yellow]"
-    )
-    for issue in all_issues:
-        priority = prioritizer.calculate_priority(issue)
-        issue.priority_score = priority.overall
+    rprint(f"[green]Processed and saved {len(all_issues)} issues[/green]")
 
     # Filter and sort
     filtered_issues = [i for i in all_issues if i.priority_score >= min_priority]
