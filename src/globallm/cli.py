@@ -253,6 +253,285 @@ def status(
     rprint(f"  Max tokens per repo: {config.budget.max_tokens_per_repo:,}")
 
 
+@app.command("issues")
+def cmd_issues(
+    repo: str = typer.Argument(..., help="Repository name (owner/repo)"),
+    state: str = typer.Option("open", help="Issue state (open, closed, all)"),
+    limit: int = typer.Option(50, help="Max issues to fetch"),
+    category: str = typer.Option(None, help="Filter by category"),
+    sort: str = typer.Option("priority", help="Sort by (priority, created, updated)"),
+) -> None:
+    """Fetch and list issues from a repository."""
+    from globallm.issues.fetcher import IssueFetcher
+    from globallm.issues.analyzer import IssueAnalyzer
+    from globallm.budget.budget_manager import BudgetManager
+    import os
+
+    token = os.getenv("GITHUB_TOKEN")
+
+    rprint(f"[bold cyan]Fetching issues from {repo}...[/bold cyan]")
+
+    # Check budget first
+    manager = BudgetManager()
+    if not manager.can_process_repo(repo):
+        rprint(f"[red]Budget limit reached for {repo}[/red]")
+        raise typer.Exit(1)
+
+    # Fetch issues
+    fetcher = IssueFetcher(token)
+    issues = fetcher.fetch_issues(repo, state=state, limit=limit)
+
+    # Analyze issues if we have an LLM configured
+    if os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"):
+        analyzer = IssueAnalyzer()
+        rprint("\n[yellow]Analyzing issues with LLM...[/yellow]")
+        for issue in issues:
+            analyzed = analyzer.analyze_issue(issue)
+            issue.category = analyzed.category
+            issue.severity = analyzed.severity
+            issue.complexity = analyzed.complexity
+
+    # Sort issues
+    if sort == "priority":
+        issues.sort(key=lambda i: i.priority_score, reverse=True)
+    elif sort == "created":
+        issues.sort(key=lambda i: i.created_at, reverse=True)
+    elif sort == "updated":
+        issues.sort(key=lambda i: i.updated_at, reverse=True)
+
+    # Filter by category if specified
+    if category:
+        from globallm.models.issue import IssueCategory
+
+        cat_enum = IssueCategory.from_string(category)
+        issues = [i for i in issues if i.category == cat_enum]
+
+    # Display results
+    rprint(f"\n[green]Found {len(issues)} issues[/green]")
+
+    if issues:
+        from rich.table import Table
+        from rich.console import Console
+
+        console = Console()
+        table = Table(title=f"Issues from {repo}")
+        table.add_column("#", style="dim")
+        table.add_column("Title", style="cyan")
+        table.add_column("Category", style="yellow")
+        table.add_column("Severity", style="red")
+        table.add_column("Priority", style="green", justify="right")
+        table.add_column("Created", style="dim")
+
+        for issue in issues[:20]:
+            table.add_row(
+                str(issue.number),
+                issue.title[:50] + "..." if len(issue.title) > 50 else issue.title,
+                issue.category.value,
+                issue.severity.value,
+                f"{issue.priority_score:.1f}",
+                issue.created_at.strftime("%Y-%m-%d"),
+            )
+
+        console.print(table)
+
+    # Record token usage
+    manager.record_usage(repo, "unknown", len(issues) * 100)
+
+
+@app.command("prioritize")
+def cmd_prioritize(
+    language: str = typer.Option(None, help="Filter by programming language"),
+    top: int = typer.Option(20, help="Number of top issues to show"),
+    min_priority: float = typer.Option(0.0, help="Minimum priority score"),
+    export: str = typer.Option(None, help="Export to file (json, csv)"),
+) -> None:
+    """Prioritize issues across repositories."""
+    from globallm.issues.prioritizer import IssuePrioritizer
+    from globallm.budget.budget_manager import BudgetManager
+    from globallm.config.loader import load_config
+    import os
+
+    token = os.getenv("GITHUB_TOKEN")
+    config = load_config()
+
+    rprint("[bold cyan]Prioritizing issues...[/bold cyan]")
+
+    prioritizer = IssuePrioritizer()
+    manager = BudgetManager()
+
+    # Get repositories from config or use defaults
+    repos = (
+        config.filters.target_repos if hasattr(config.filters, "target_repos") else []
+    )
+
+    if not repos:
+        rprint(
+            "[yellow]No repositories configured. Add some with config set filters.target_repos[/yellow]"
+        )
+        rprint(
+            'Example: globallm config set filters.target_repos \'[["owner/repo1", "owner/repo2"]]\''
+        )
+        raise typer.Exit(1)
+
+    # Fetch and prioritize issues
+    all_issues = []
+    for repo in repos:
+        if not manager.can_process_repo(repo):
+            rprint(f"[yellow]Skipping {repo} - budget limit[/yellow]")
+            continue
+
+        from globallm.issues.fetcher import IssueFetcher
+
+        fetcher = IssueFetcher(token)
+        issues = fetcher.fetch_issues(repo, state="open", limit=50)
+        all_issues.extend(issues)
+
+    # Calculate priority scores
+    rprint(
+        f"\n[yellow]Calculating priority scores for {len(all_issues)} issues...[/yellow]"
+    )
+    for issue in all_issues:
+        score = prioritizer.calculate_priority_score(issue)
+        issue.priority_score = score
+
+    # Filter and sort
+    filtered_issues = [i for i in all_issues if i.priority_score >= min_priority]
+    filtered_issues.sort(key=lambda i: i.priority_score, reverse=True)
+
+    # Display results
+    rprint(f"\n[green]Top {min(top, len(filtered_issues))} prioritized issues[/green]")
+
+    if filtered_issues:
+        from rich.table import Table
+        from rich.console import Console
+
+        console = Console()
+        table = Table(title=f"Top Issues (Priority > {min_priority})")
+        table.add_column("Repository", style="cyan")
+        table.add_column("#", style="dim")
+        table.add_column("Title", style="white")
+        table.add_column("Category", style="yellow")
+        table.add_column("Priority", style="green", justify="right")
+
+        for issue in filtered_issues[:top]:
+            table.add_row(
+                issue.repository,
+                str(issue.number),
+                issue.title[:40] + "..." if len(issue.title) > 40 else issue.title,
+                issue.category.value,
+                f"{issue.priority_score:.1f}",
+            )
+
+        console.print(table)
+
+        # Export if requested
+        if export:
+            if export == "json":
+                import json
+
+                data = [
+                    {
+                        "repository": i.repository,
+                        "number": i.number,
+                        "title": i.title,
+                        "priority": i.priority_score,
+                        "category": i.category.value,
+                    }
+                    for i in filtered_issues[:top]
+                ]
+                with open("prioritized_issues.json", "w") as f:
+                    json.dump(data, f, indent=2)
+                rprint("\n[green]Exported to prioritized_issues.json[/green]")
+
+
+@app.command("fix")
+def cmd_fix(
+    issue_url: str = typer.Argument(..., help="GitHub issue URL"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Don't actually create PR"),
+    auto_merge: bool = typer.Option(True, help="Enable auto-merge if safe"),
+    branch: str = typer.Option("main", help="Target branch"),
+) -> None:
+    """Analyze an issue and generate a fix."""
+    from globallm.solution.engine import SolutionEngine
+    from globallm.automation.pr_automation import PRAutomation
+    from globallm.budget.budget_manager import BudgetManager
+    import os
+    import re
+
+    token = os.getenv("GITHUB_TOKEN")
+    if not token:
+        rprint("[red]GITHUB_TOKEN required for PR creation[/red]")
+        raise typer.Exit(1)
+
+    # Parse issue URL
+    match = re.match(r"https://github.com/([^/]+)/([^/]+)/issues/(\d+)", issue_url)
+    if not match:
+        rprint("[red]Invalid issue URL format[/red]")
+        rprint("Expected: https://github.com/owner/repo/issues/123")
+        raise typer.Exit(1)
+
+    owner, repo_name, issue_number = match.groups()
+    repo = f"{owner}/{repo_name}"
+
+    rprint(f"[bold cyan]Analyzing issue #{issue_number} in {repo}...[/bold cyan]")
+
+    # Check budget
+    manager = BudgetManager()
+    if not manager.can_process_repo(repo, 10000):
+        rprint(f"[red]Insufficient budget for {repo}[/red]")
+        raise typer.Exit(1)
+
+    # Generate solution
+    engine = SolutionEngine()
+    rprint("\n[yellow]Phase 1: Analyzing issue...[/yellow]")
+    solution = engine.generate_solution(
+        repo_url=f"https://github.com/{repo}",
+        issue_number=int(issue_number),
+        dry_run=dry_run,
+    )
+
+    if not solution:
+        rprint("[red]Failed to generate solution[/red]")
+        raise typer.Exit(1)
+
+    # Display solution summary
+    rprint("\n[bold green]Solution Generated![/bold green]")
+    rprint(f"  Description: {solution.description[:100]}...")
+    rprint(f"  Complexity: {solution.complexity}/10")
+    rprint(f"  Risk Level: {solution.risk_level.value.upper()}")
+    rprint(f"  Files: {len(solution.patches)}")
+    rprint(f"  Auto-merge: {'Yes' if solution.can_auto_merge else 'No'}")
+
+    if dry_run:
+        rprint("\n[yellow]Dry run mode - skipping PR creation[/yellow]")
+        rprint("\n[bold]Proposed Changes:[/bold]")
+        for patch in solution.patches:
+            rprint(f"  - {patch.file_path}")
+        return
+
+    # Create PR
+    rprint("\n[yellow]Phase 2: Creating PR...[/yellow]")
+    pr_automation = PRAutomation(token)
+    result = pr_automation.create_pr(
+        solution,
+        base_branch=branch,
+        enable_auto_merge=auto_merge,
+        dry_run=False,
+    )
+
+    if result.success:
+        rprint("\n[green]PR created successfully![/green]")
+        rprint(f"  PR #{result.pr_number}: {result.pr_url}")
+        if result.auto_merge_enabled:
+            rprint("  [green]Auto-merge enabled[/green]")
+        if result.warnings:
+            for warning in result.warnings:
+                rprint(f"  [yellow]Warning: {warning}[/yellow]")
+    else:
+        rprint(f"\n[red]Failed to create PR: {result.error}[/red]")
+        raise typer.Exit(1)
+
+
 @config_app.command("show")
 def config_show(
     key: str = typer.Option(None, help="Show specific config key"),
