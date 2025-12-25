@@ -5,7 +5,7 @@ from rich import print as rprint
 
 from globallm.config.loader import load_config, save_config, get_config_path
 
-app = typer.Typer()
+app = typer.Typer(help="Configuration management")
 
 
 @app.command()

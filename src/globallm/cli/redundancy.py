@@ -3,7 +3,7 @@
 import typer
 from rich import print as rprint
 
-app = typer.Typer()
+app = typer.Typer(help="Detect redundancy between repositories")
 
 
 @app.command()

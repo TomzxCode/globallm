@@ -70,18 +70,24 @@ from . import (  # noqa: E402
     fix,
 )
 
-app.add_typer(discover.app, name="discover")
-app.add_typer(analyze.app, name="analyze")
-app.add_typer(redundancy.app, name="redundancy")
-app.add_typer(status.app, name="status")
-app.add_typer(issues.app, name="issues")
-app.add_typer(prioritize.app, name="prioritize")
-app.add_typer(fix.app, name="fix")
+app.add_typer(
+    discover.app, name="discover", help="Discover repositories by domain and language"
+)
+app.add_typer(analyze.app, name="analyze", help="Analyze a single repository")
+app.add_typer(
+    redundancy.app, name="redundancy", help="Detect redundancy between repositories"
+)
+app.add_typer(status.app, name="status", help="Show system status and statistics")
+app.add_typer(issues.app, name="issues", help="Fetch and list issues from a repository")
+app.add_typer(
+    prioritize.app, name="prioritize", help="Prioritize issues across repositories"
+)
+app.add_typer(fix.app, name="fix", help="Analyze an issue and generate a fix")
 
 from . import config, budget  # noqa: E402
 
-config_app.add_typer(config.app)
-budget_app.add_typer(budget.app)
+config_app.add_typer(config.app, help="Configuration management")
+budget_app.add_typer(budget.app, help="Budget management")
 
 
 # Legacy argparse support for backward compatibility

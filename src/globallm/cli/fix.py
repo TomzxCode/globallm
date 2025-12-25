@@ -5,7 +5,7 @@ import re
 import typer
 from rich import print as rprint
 
-app = typer.Typer()
+app = typer.Typer(help="Analyze an issue and generate a fix")
 
 
 @app.command()

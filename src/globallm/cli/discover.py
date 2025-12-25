@@ -8,7 +8,7 @@ from rich import print as rprint
 from globallm.cli.common import _display_results
 from globallm.config.loader import load_config
 
-app = typer.Typer()
+app = typer.Typer(help="Discover repositories by domain and language")
 
 
 @app.command()

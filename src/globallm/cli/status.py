@@ -5,7 +5,7 @@ from rich import print as rprint
 
 from globallm.config.loader import load_config
 
-app = typer.Typer()
+app = typer.Typer(help="Show system status and statistics")
 
 
 @app.command()

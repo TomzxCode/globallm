@@ -3,7 +3,7 @@
 import typer
 from rich import print as rprint
 
-app = typer.Typer()
+app = typer.Typer(help="Fetch and list issues from a repository")
 
 
 @app.command()

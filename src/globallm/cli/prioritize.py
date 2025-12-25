@@ -7,7 +7,7 @@ from rich import print as rprint
 
 from globallm.config.loader import load_config
 
-app = typer.Typer()
+app = typer.Typer(help="Prioritize issues across repositories")
 
 
 @app.command()
