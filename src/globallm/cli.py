@@ -1,29 +1,36 @@
 """CLI for GitHub scanner."""
 
-import os
 import argparse
+import os
 import time
 
 from dotenv import load_dotenv
-from globallm.scanner import GitHubScanner, Domain
 from globallm.logging_config import configure_logging, get_logger
 
 logger = get_logger(__name__)
 
+DOMAIN_CHOICES = [
+    "overall",
+    "ai_ml",
+    "web_dev",
+    "data_science",
+    "cloud_devops",
+    "mobile",
+    "security",
+    "games",
+]
 
-def main() -> None:
-    """Run the GitHub scanner CLI."""
-    load_dotenv()
-    configure_logging()
 
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Search GitHub for impactful repositories"
     )
     parser.add_argument(
         "--domain",
         type=str,
-        choices=[d.value for d in Domain],
-        default=Domain.OVERALL.value,
+        choices=DOMAIN_CHOICES,
+        default="overall",
         help="Domain to search (default: overall)",
     )
     parser.add_argument("--language", type=str, help="Filter by programming language")
@@ -33,8 +40,12 @@ def main() -> None:
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose logging"
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+def run(args: argparse.Namespace) -> None:
+    """Run the GitHub scanner command."""
+    from globallm.scanner import GitHubScanner, Domain
 
     if args.verbose:
         logger.debug("Verbose mode enabled")
@@ -81,6 +92,14 @@ def main() -> None:
         )
         print(f"   Language: {repo.language or 'N/A'}")
         print()
+
+
+def main() -> None:
+    """Run the GitHub scanner CLI."""
+    load_dotenv()
+    configure_logging()
+    args = parse_args()
+    run(args)
 
 
 if __name__ == "__main__":
