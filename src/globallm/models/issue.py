@@ -46,19 +46,19 @@ class IssueCategory(Enum):
 
         # Priority order matters - check most specific first
         label_mappings = [
-            ([{"security", "vulnerability", "cve"}], cls.CRITICAL_SECURITY),
-            ([{"bug", "crash", "error"}], cls.BUG),
-            ([{"critical", "urgent", "blocker"}], cls.BUG_CRITICAL),
-            ([{"performance", "slow", "optimization"}], cls.PERFORMANCE),
-            ([{"feature", "enhancement"}], cls.FEATURE),
-            ([{"docs", "documentation"}], cls.DOCUMENTATION),
-            ([{"style", "lint", "formatting"}], cls.STYLE),
-            ([{"refactor", "cleanup"}], cls.REFACTOR),
-            ([{"test", "testing", "tests"}], cls.TESTS),
+            ({"security", "vulnerability", "cve"}, cls.CRITICAL_SECURITY),
+            ({"bug", "crash", "error"}, cls.BUG),
+            ({"critical", "urgent", "blocker"}, cls.BUG_CRITICAL),
+            ({"performance", "slow", "optimization"}, cls.PERFORMANCE),
+            ({"feature", "enhancement"}, cls.FEATURE),
+            ({"docs", "documentation"}, cls.DOCUMENTATION),
+            ({"style", "lint", "formatting"}, cls.STYLE),
+            ({"refactor", "cleanup"}, cls.REFACTOR),
+            ({"test", "testing", "tests"}, cls.TESTS),
         ]
 
         for label_group, category in label_mappings:
-            if any(label_group & label_set):
+            if label_group & label_set:
                 return category
 
         return cls.UNKNOWN
