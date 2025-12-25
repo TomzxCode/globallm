@@ -70,19 +70,13 @@ from . import (  # noqa: E402
     fix,
 )
 
-app.add_typer(
-    discover.app, name="discover", help="Discover repositories by domain and language"
-)
-app.add_typer(analyze.app, name="analyze", help="Analyze a single repository")
-app.add_typer(
-    redundancy.app, name="redundancy", help="Detect redundancy between repositories"
-)
-app.add_typer(status.app, name="status", help="Show system status and statistics")
-app.add_typer(issues.app, name="issues", help="Fetch and list issues from a repository")
-app.add_typer(
-    prioritize.app, name="prioritize", help="Prioritize issues across repositories"
-)
-app.add_typer(fix.app, name="fix", help="Analyze an issue and generate a fix")
+app.add_typer(discover.app)
+app.add_typer(analyze.app)
+app.add_typer(redundancy.app)
+app.add_typer(status.app)
+app.add_typer(issues.app)
+app.add_typer(prioritize.app)
+app.add_typer(fix.app)
 
 from . import config, budget  # noqa: E402
 
