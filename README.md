@@ -65,14 +65,79 @@ globallm config set github.token your_token_here
 
 ## Usage
 
+### Command Workflow
+
+```mermaid
+flowchart TD
+    Start([Start]) --> Config[Configuration]
+    Start --> Budget[Budget Check]
+
+    subgraph Setup ["Initial Setup"]
+        Config --> ConfigShow["globallm config show"]
+        Config --> ConfigSet["globallm config set <key> <value>"]
+        Budget --> BudgetShow["globallm budget show"]
+    end
+
+    ConfigSet --> Discover[Discovery]
+    BudgetShow --> Discover
+
+    subgraph Discovery ["Find Repositories"]
+        Discover --> DiscoverCmd["globallm discover<br/>--domain <domain><br/>--language <lang>"]
+        DiscoverCmd --> Analyze[Analyze]
+    end
+
+    subgraph Analysis ["Analyze Repositories"]
+        Analyze --> AnalyzeCmd["globallm analyze <repo><br/>--include-dependents"]
+        AnalyzeCmd --> AnalyzeUser{Analyze User?}
+        AnalyzeUser -->|Yes| UserCmd["globallm analyze-user <username>"]
+        AnalyzeUser -->|No| Redundancy
+        UserCmd --> Redundancy[Redundancy Check]
+    end
+
+    subgraph Redundancy ["Detect Duplicates"]
+        Redundancy --> RedundancyCmd["globallm redundancy <repo1> <repo2><br/>--threshold <0-1>"]
+        RedundancyCmd --> Issues[Issue Discovery]
+    end
+
+    subgraph Issues ["Fetch Issues"]
+        Issues --> IssuesCmd["globallm issues <repo><br/>--state <open|closed|all><br/>--sort <priority|created>"]
+        IssuesCmd --> Prioritize[Prioritization]
+    end
+
+    subgraph Prioritize ["Prioritize Issues"]
+        Prioritize --> PrioritizeCmd["globallm prioritize<br/>--language <lang><br/>--top <N><br/>--min-priority <score>"]
+        PrioritizeCmd --> Fix{Fix Issue?}
+    end
+
+    subgraph Fix ["Generate Fix"]
+        Fix -->|Yes| FixCmd["globallm fix <issue_url><br/>--dry-run<br/>--auto-merge"]
+        Fix -->|No| Status
+        FixCmd --> Status[Check Status]
+    end
+
+    subgraph Status ["Monitor Progress"]
+        Status --> StatusCmd["globallm status<br/>--dashboard<br/>--export json"]
+        StatusCmd --> End([End])
+    end
+
+    classDef setup fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef primary fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef action fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef monitor fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    class ConfigShow,ConfigSet,BudgetShow setup
+    class DiscoverCmd,AnalyzeCmd,UserCmd,RedundancyCmd primary
+    class IssuesCmd,PrioritizeCmd,FixCmd action
+    class StatusCmd monitor
+```
+
 ### Configuration Management
+
+Manage GlobalLM settings including filters, API tokens, and thresholds. Use this to customize how the tool discovers and evaluates repositories.
 
 ```bash
 # Show all configuration
 globallm config show
-
-# Show specific config key
-globallm config show --key filters.min_stars
 
 # Set a configuration value
 globallm config set filters.min_stars 5000
@@ -84,6 +149,8 @@ globallm config path
 
 ### Budget Management
 
+Track and control resource usage including tokens, time, and per-repository limits. Essential for managing costs when running at scale.
+
 ```bash
 # Show current budget status
 globallm budget show
@@ -93,6 +160,8 @@ globallm budget reset
 ```
 
 ### Discover Repositories
+
+Search GitHub for high-impact repositories by domain and language. Uses curated queries to find libraries where contributions will have the most downstream impact.
 
 ```bash
 # Discover Python AI/ML libraries
@@ -110,15 +179,19 @@ globallm discover --domain data_science --language python --library-only
 
 ### Analyze a Repository
 
+Deep-dive into a specific repository's health, impact metrics, and dependency graph. Use this to evaluate whether a project is worth contributing to.
+
 ```bash
 # Basic repository analysis
 globallm analyze octocat/Hello-World
 
-# Include dependent analysis
+# Include dependent analysis (calculates downstream impact)
 globallm analyze --include-dependents tensorflow/tensorflow
 ```
 
 ### Detect Redundancy
+
+Identify duplicate or overlapping projects by comparing README similarity. Use this to consolidate efforts and deprecate redundant libraries.
 
 ```bash
 # Compare two repositories for redundancy
@@ -133,6 +206,8 @@ globallm redundancy org/repo1 org/repo2 org/repo3
 
 ### System Status
 
+View overall system health, budget utilization, and recent activity. Use the dashboard mode for a live overview of operations.
+
 ```bash
 # Show system status
 globallm status
@@ -145,6 +220,8 @@ globallm status --export json > status.json
 ```
 
 ### Fetch Issues
+
+List and filter issues from a repository. Issues are automatically categorized (bug, feature, documentation, etc.) and can be sorted by priority.
 
 ```bash
 # List open issues from a repository
@@ -164,6 +241,8 @@ globallm issues --category bug --sort priority octocat/Hello-World
 
 ### Prioritize Issues
 
+Rank issues across all repositories using a multi-factor scoring algorithm that considers health, impact, solvability, urgency, and redundancy. This identifies the highest-value work.
+
 ```bash
 # Show top 20 priority issues across all repositories
 globallm prioritize
@@ -181,6 +260,8 @@ globallm prioritize --export csv > priorities.csv
 
 ### Fix Issues
 
+Automatically analyze an issue, generate a solution with tests, and create a pull request. Safe changes can auto-merge based on complexity scoring.
+
 ```bash
 # Analyze an issue and generate a fix (creates PR)
 globallm fix https://github.com/owner/repo/issues/123
@@ -196,6 +277,8 @@ globallm fix --no-auto-merge https://github.com/owner/repo/issues/123
 ```
 
 ### Analyze User
+
+Evaluate all repositories owned by a user or organization. Provides keep/archive recommendations to help maintain focus on high-impact projects.
 
 ```bash
 # Analyze all repositories owned by a user
