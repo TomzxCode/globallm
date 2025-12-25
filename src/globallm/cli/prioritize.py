@@ -21,6 +21,8 @@ def prioritize(
     from globallm.issues.prioritizer import IssuePrioritizer
     from globallm.budget.budget_manager import BudgetManager
     from globallm.issues.fetcher import IssueFetcher
+    from globallm.issues.analyzer import IssueAnalyzer
+    from globallm.llm.claude import ClaudeLLM
     import os
 
     token = os.getenv("GITHUB_TOKEN")
@@ -28,7 +30,13 @@ def prioritize(
 
     rprint("[bold cyan]Prioritizing issues...[/bold cyan]")
 
-    prioritizer = IssuePrioritizer()
+    llm = ClaudeLLM(
+        model=config.llm_model,
+        temperature=config.llm_temperature,
+        max_tokens=config.llm_max_tokens,
+    )
+    analyzer = IssueAnalyzer(llm)
+    prioritizer = IssuePrioritizer(analyzer)
     manager = BudgetManager()
 
     # Get repositories from config or use defaults
@@ -61,8 +69,8 @@ def prioritize(
         f"\n[yellow]Calculating priority scores for {len(all_issues)} issues...[/yellow]"
     )
     for issue in all_issues:
-        score = prioritizer.calculate_priority_score(issue)
-        issue.priority_score = score
+        priority = prioritizer.calculate_priority(issue)
+        issue.priority_score = priority.overall
 
     # Filter and sort
     filtered_issues = [i for i in all_issues if i.priority_score >= min_priority]
