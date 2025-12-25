@@ -65,32 +65,153 @@ globallm config set github.token your_token_here
 
 ## Usage
 
+### Configuration Management
+
+```bash
+# Show all configuration
+globallm config show
+
+# Show specific config key
+globallm config show --key filters.min_stars
+
+# Set a configuration value
+globallm config set filters.min_stars 5000
+globallm config set github.token your_token_here
+
+# Show configuration file path
+globallm config path
+```
+
+### Budget Management
+
+```bash
+# Show current budget status
+globallm budget show
+
+# Reset budget tracking
+globallm budget reset
+```
+
 ### Discover Repositories
 
 ```bash
-# Search by domain
-globallm discover --domain ai_ml --language python --max-results 10
+# Discover Python AI/ML libraries
+globallm discover --domain ai_ml --language python --max-results 20
 
-# Available domains: ai_ml, web_dev, data_science, cloud_devops, mobile, security, games
+# Discover with minimum star and dependent filters
+globallm discover --domain web_dev --language javascript --min-stars 1000 --min-dependents 50
+
+# Discover only libraries (exclude apps, docs, etc.)
+globallm discover --domain data_science --language python --library-only
+
+# Available domains: ai_ml, web_dev, data_science, cloud_devops, mobile, security, games, overall
+# Available languages: python, javascript, typescript, rust, go, java, and more
 ```
 
 ### Analyze a Repository
 
 ```bash
+# Basic repository analysis
 globallm analyze octocat/Hello-World
+
+# Include dependent analysis
+globallm analyze --include-dependents tensorflow/tensorflow
+```
+
+### Detect Redundancy
+
+```bash
+# Compare two repositories for redundancy
+globallm redundancy requests/urllib3 python/cpython
+
+# Set custom similarity threshold (0-1)
+globallm redundancy --threshold 0.8 repo1/project repo2/project
+
+# Compare multiple repositories
+globallm redundancy org/repo1 org/repo2 org/repo3
 ```
 
 ### System Status
 
 ```bash
+# Show system status
+globallm status
+
+# Show dashboard view
 globallm status --dashboard
+
+# Export status to JSON
+globallm status --export json > status.json
 ```
 
-### Configuration Management
+### Fetch Issues
 
 ```bash
-globallm config set filters.min_stars 5000
-globallm config show filters
+# List open issues from a repository
+globallm issues octocat/Hello-World
+
+# List closed issues
+globallm issues --state closed octocat/Hello-World
+
+# List all issues with limit
+globallm issues --state all --limit 100 octocat/Hello-World
+
+# Filter by category and sort
+globallm issues --category bug --sort priority octocat/Hello-World
+
+# Sort options: priority, created, updated
+```
+
+### Prioritize Issues
+
+```bash
+# Show top 20 priority issues across all repositories
+globallm prioritize
+
+# Filter by language
+globallm prioritize --language python
+
+# Show top 50 issues with minimum priority score
+globallm prioritize --top 50 --min-priority 0.5
+
+# Export to file
+globallm prioritize --export json > priorities.json
+globallm prioritize --export csv > priorities.csv
+```
+
+### Fix Issues
+
+```bash
+# Analyze an issue and generate a fix (creates PR)
+globallm fix https://github.com/owner/repo/issues/123
+
+# Dry run (don't actually create PR)
+globallm fix --dry-run https://github.com/owner/repo/issues/123
+
+# Target a specific branch
+globallm fix --branch develop https://github.com/owner/repo/issues/123
+
+# Disable auto-merge for safe changes
+globallm fix --no-auto-merge https://github.com/owner/repo/issues/123
+```
+
+### Analyze User
+
+```bash
+# Analyze all repositories owned by a user
+globallm analyze-user octocat
+
+# Filter by minimum stars
+globallm analyze-user --min-stars 100 octocat
+
+# Include forked repositories
+globallm analyze-user --include-forks octocat
+
+# Show keep/archive recommendations
+globallm analyze-user --recommend octocat
+
+# Limit number of results
+globallm analyze-user --max-results 50 octocat
 ```
 
 ## How It Works
