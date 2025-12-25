@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-globallm = "globallm.cli:app"
+globallm = "globallm.cli.cli:app"
 
 [build-system]
 requires = ["hatchling"]
