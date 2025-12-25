@@ -127,3 +127,11 @@ class Repository:
             + self.subscribers * 5.0
             + self.dependents * 10.0  # Dependents weighted highest
         )
+
+
+@dataclass
+class MaintenanceVerdict:
+    """Verdict on whether a repository is worth maintaining."""
+
+    worthy: bool
+    reason: str
