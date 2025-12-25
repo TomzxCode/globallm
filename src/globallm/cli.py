@@ -9,6 +9,8 @@ from globallm.logging_config import configure_logging, get_logger
 
 logger = get_logger(__name__)
 
+LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
 DOMAIN_CHOICES = [
     "overall",
     "ai_ml",
@@ -39,6 +41,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose logging"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=LOG_LEVELS,
+        default="INFO",
+        help="Set logging level (default: INFO)",
     )
     return parser.parse_args()
 
@@ -97,8 +106,8 @@ def run(args: argparse.Namespace) -> None:
 def main() -> None:
     """Run the GitHub scanner CLI."""
     load_dotenv()
-    configure_logging()
     args = parse_args()
+    configure_logging(args.log_level)
     run(args)
 
 
