@@ -7,25 +7,43 @@ from rich import print as rprint
 
 from globallm.storage.repository_store import RepositoryStore
 
-app = typer.Typer(help="Analyze a single repository")
+app = typer.Typer(help="Analyze repositories")
 
 
 @app.command()
 def analyze(
-    repo: str = typer.Argument(..., help="Repository name (owner/repo)"),
+    repo: str | None = typer.Argument(None, help="Repository name (owner/repo), or analyze all unanalyzed repositories if not specified"),
     include_dependents: bool = typer.Option(False, help="Include dependent analysis"),
 ) -> None:
-    """Analyze a single repository.
+    """Analyze a repository or all unanalyzed repositories.
 
     The analysis automatically calculates whether the repository is worth working on
     and updates the repository store.
     """
+    store = RepositoryStore()
+
+    if repo is None:
+        # Analyze all unanalyzed repositories
+        unanalyzed = store.get_unanalyzed()
+        if not unanalyzed:
+            rprint("[dim]No unanalyzed repositories found.[/dim]")
+            return
+
+        rprint(f"[bold cyan]Found {len(unanalyzed)} unanalyzed repositories[/bold cyan]")
+        for repo_dict in unanalyzed:
+            repo_name = repo_dict.get("name")
+            if repo_name:
+                _analyze_single(repo_name, store, rprint)
+    else:
+        _analyze_single(repo, store, rprint)
+
+
+def _analyze_single(repo: str, store: RepositoryStore, rprint) -> None:
+    """Analyze a single repository."""
     from globallm.scanner import GitHubScanner
     import os
 
     token = os.getenv("GITHUB_TOKEN")
-    store = RepositoryStore()
-
     rprint(f"[bold cyan]Analyzing {repo}...[/bold cyan]")
 
     scanner = GitHubScanner(token)
