@@ -36,17 +36,50 @@ Better software is a means to these ends.
 
 ## Installation
 
-```bash
-# Requires Python 3.14+
-uv add globallm
-```
+### Prerequisites
 
-Or install from source:
+- **Python 3.14+**
+- **Docker** (for PostgreSQL database)
+- **GitHub token** (for higher API rate limits)
+
+### Quick Start
 
 ```bash
+# Clone the repository
 git clone https://github.com/yourorg/globallm.git
 cd globallm
+
+# Install dependencies
 uv sync
+
+# Start PostgreSQL
+docker-compose up -d
+
+# Initialize the database
+uv run globallm database init
+```
+
+### Database Setup
+
+GlobalLM uses PostgreSQL for data persistence. The `docker-compose.yml` file includes a PostgreSQL service:
+
+```bash
+# Start PostgreSQL
+docker-compose up -d
+
+# Stop PostgreSQL
+docker-compose down
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+### Custom Database Connection
+
+By default, GlobalLM connects to `postgresql://globallm:globallm@localhost:5432/globallm`. To use a different database:
+
+```bash
+export GLOBALLM_DATABASE_URL="postgresql://user:pass@host:5432/dbname"
 ```
 
 ## Configuration
@@ -61,6 +94,21 @@ Create a `.env` file or use the CLI:
 
 ```bash
 globallm config set github.token your_token_here
+```
+
+## Database Management
+
+Manage the GlobalLM database:
+
+```bash
+# Initialize database schema
+globallm database init
+
+# Show database status
+globallm database status
+
+# Close connection pool (cleanup)
+globallm database close
 ```
 
 ## Usage
@@ -134,7 +182,7 @@ flowchart TD
     class StatusCmd monitor
 ```
 
-> **Note**: Discovered repositories are automatically stored in `~/.local/share/globallm/repositories.yaml`. The `analyze` command calculates `worth_working_on` based on health and impact scores (health > 0.5 AND impact > 0.5). The `prioritize` command reads only approved repos from the store.
+> **Note**: Discovered repositories and prioritized issues are stored in a PostgreSQL database. The `analyze` command calculates `worth_working_on` based on health and impact scores (health > 0.5 AND impact > 0.5). The `prioritize` command reads only approved repos from the database.
 
 ### Configuration Management
 
@@ -364,9 +412,23 @@ src/globallm/
 ├── analysis/        # Impact calculation and dependency graph analysis
 ├── discovery/       # Repository discovery and package registry integration
 ├── filtering/       # Health scoring and repository filtering
+├── storage/         # PostgreSQL database persistence (repositories, issues)
 ├── models/          # Data models (Repository, Issue, Solution)
+├── cli/             # Command-line interface commands
 └── config/          # Configuration management with Pydantic
 ```
+
+### Database Schema
+
+GlobalLM uses PostgreSQL with JSONB columns for flexible schema evolution:
+
+| Table       | Columns                          | Description                       |
+|-------------|----------------------------------|-----------------------------------|
+| `issues`    | repository, number, data (JSONB) | Prioritized issues with metadata  |
+| `repositories` | name, data (JSONB), worth_working_on | Discovered repos with analysis  |
+| `schema_migrations` | version, applied_at        | Database schema version tracking  |
+
+Indexes on `repository`, `name`, and JSONB data fields enable efficient querying across 20-100 concurrent processes.
 
 ## Development
 

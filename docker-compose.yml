@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: globallm-postgres
+    environment:
+      POSTGRES_DB: globallm
+      POSTGRES_USER: globallm
+      POSTGRES_PASSWORD: globallm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql
+    restart: unless-stopped
+
+volumes:
+  postgres:

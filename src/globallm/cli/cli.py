@@ -61,6 +61,7 @@ def main(
 
 # Import and register commands (must come after app is defined)
 from . import (  # noqa: E402
+    database,
     discover,
     analyze,
     redundancy,
@@ -72,6 +73,7 @@ from . import (  # noqa: E402
     repos,
 )
 
+app.add_typer(database.app, name="database", help="Database management")
 app.add_typer(discover.app)
 app.add_typer(analyze.app)
 app.add_typer(redundancy.app)

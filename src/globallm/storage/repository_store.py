@@ -1,50 +1,32 @@
-"""Persistent repository storage."""
+"""Persistent repository storage using PostgreSQL."""
 
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-import yaml
+from psycopg.rows import dict_row
+from psycopg.types.json import Json
 from structlog import get_logger
 
+from globallm.storage.db import get_connection
 
 logger = get_logger(__name__)
 
-# Storage directory (XDG Data Home)
-STATE_DIR = Path.home() / ".local" / "share" / "globallm"
-STATE_FILE = STATE_DIR / "repositories.yaml"
-
 
 class RepositoryStore:
-    """Persistent storage for discovered and analyzed repositories."""
-
-    def __init__(self, state_file: Path | None = None) -> None:
-        """Initialize the repository store.
-
-        Args:
-            state_file: Path to the state file. Defaults to ~/.local/share/globallm/repositories.yaml
-        """
-        self._state_file = state_file or STATE_FILE
-        self._ensure_dir()
-
-    def _ensure_dir(self) -> None:
-        """Ensure the state directory exists."""
-        self._state_file.parent.mkdir(parents=True, exist_ok=True)
+    """Persistent storage for discovered and analyzed repositories using PostgreSQL."""
 
     def load_repositories(self) -> list[dict[str, Any]]:
         """Load all repositories from storage.
 
         Returns:
-            List of repository dictionaries, or empty list if file doesn't exist.
+            List of repository dictionaries.
         """
-        if not self._state_file.exists():
-            logger.debug("no_repository_file", path=str(self._state_file))
-            return []
-
         try:
-            with self._state_file.open("r") as f:
-                data = yaml.safe_load(f) or {}
-            return data.get("repositories", [])
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute("SELECT data FROM repositories")
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
         except Exception as e:
             logger.error("failed_to_load_repositories", error=str(e))
             return []
@@ -52,22 +34,50 @@ class RepositoryStore:
     def save_repositories(
         self, repos: list[dict[str, Any]], discovered_at: datetime | None = None
     ) -> None:
-        """Save repositories to storage.
+        """Save repositories to storage (replaces all existing).
 
         Args:
             repos: List of repository dictionaries to save.
             discovered_at: Timestamp when these repos were discovered.
         """
-        data: dict[str, Any] = {
-            "repositories": repos,
-            "discovered_at": (discovered_at or datetime.now()).isoformat(),
-        }
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    timestamp = (discovered_at or datetime.now()).isoformat()
 
-        self._ensure_dir()
-        with self._state_file.open("w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+                    for repo in repos:
+                        # Extract worth_working_on for indexed column
+                        worth_working_on = repo.get("worth_working_on")
+                        analyzed_at = repo.get("analyzed_at")
 
-        logger.info("saved_repositories", count=len(repos), path=str(self._state_file))
+                        # Add metadata
+                        repo.setdefault("_metadata", {})["discovered_at"] = timestamp
+
+                        cur.execute(
+                            """
+                            INSERT INTO repositories (name, data, worth_working_on, analyzed_at)
+                            VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (name)
+                            DO UPDATE SET data = EXCLUDED.data,
+                                          worth_working_on = EXCLUDED.worth_working_on,
+                                          analyzed_at = EXCLUDED.analyzed_at,
+                                          updated_at = NOW()
+                        """,
+                            (
+                                repo.get("name"),
+                                Json(repo),
+                                worth_working_on,
+                                datetime.fromisoformat(analyzed_at)
+                                if analyzed_at
+                                else None,
+                            ),
+                        )
+
+                conn.commit()
+                logger.info("saved_repositories", count=len(repos))
+        except Exception as e:
+            logger.error("failed_to_save_repositories", error=str(e))
+            raise
 
     def get_repository(self, name: str) -> dict[str, Any] | None:
         """Get a repository by name.
@@ -78,11 +88,22 @@ class RepositoryStore:
         Returns:
             Repository dictionary, or None if not found.
         """
-        repos = self.load_repositories()
-        for repo in repos:
-            if repo.get("name") == name:
-                return repo
-        return None
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM repositories
+                        WHERE name = %s
+                    """,
+                        (name,),
+                    )
+
+                    result = cur.fetchone()
+                    return result["data"] if result else None
+        except Exception as e:
+            logger.error("failed_to_get_repository", name=name, error=str(e))
+            return None
 
     def update_repository(self, name: str, **kwargs: Any) -> None:
         """Update fields of a repository.
@@ -91,18 +112,53 @@ class RepositoryStore:
             name: Repository name (owner/repo).
             **kwargs: Fields to update (e.g., worth_working_on=True).
         """
-        repos = self.load_repositories()
-        updated = False
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    # First fetch existing data
+                    cur.execute(
+                        """
+                        SELECT data, worth_working_on FROM repositories WHERE name = %s
+                    """,
+                        (name,),
+                    )
 
-        for repo in repos:
-            if repo.get("name") == name:
-                repo.update(kwargs)
-                updated = True
-                break
+                    result = cur.fetchone()
+                    if result is None:
+                        logger.warning("repository_not_found_for_update", name=name)
+                        return
 
-        if updated:
-            self.save_repositories(repos)
-            logger.info("updated_repository", name=name, fields=list(kwargs.keys()))
+                    data, current_worth = result
+                    data.update(kwargs)
+
+                    # Update the worth_working_on column if provided
+                    worth_working_on = kwargs.get("worth_working_on", current_worth)
+                    analyzed_at = data.get("analyzed_at")
+
+                    cur.execute(
+                        """
+                        UPDATE repositories
+                        SET data = %s,
+                            worth_working_on = %s,
+                            analyzed_at = %s,
+                            updated_at = NOW()
+                        WHERE name = %s
+                    """,
+                        (
+                            Json(data),
+                            worth_working_on,
+                            datetime.fromisoformat(analyzed_at)
+                            if analyzed_at
+                            else None,
+                            name,
+                        ),
+                    )
+
+                conn.commit()
+                logger.info("updated_repository", name=name, fields=list(kwargs.keys()))
+        except Exception as e:
+            logger.error("failed_to_update_repository", name=name, error=str(e))
+            raise
 
     def add_or_update(self, repo_dict: dict[str, Any]) -> None:
         """Add a new repository or update an existing one.
@@ -110,17 +166,41 @@ class RepositoryStore:
         Args:
             repo_dict: Repository dictionary to add or update.
         """
-        repos = self.load_repositories()
-        name = repo_dict.get("name")
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    worth_working_on = repo_dict.get("worth_working_on")
+                    analyzed_at = repo_dict.get("analyzed_at")
 
-        # Remove existing repo with same name
-        repos = [r for r in repos if r.get("name") != name]
+                    cur.execute(
+                        """
+                        INSERT INTO repositories (name, data, worth_working_on, analyzed_at)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (name)
+                        DO UPDATE SET data = EXCLUDED.data,
+                                      worth_working_on = EXCLUDED.worth_working_on,
+                                      analyzed_at = EXCLUDED.analyzed_at,
+                                      updated_at = NOW()
+                    """,
+                        (
+                            repo_dict.get("name"),
+                            Json(repo_dict),
+                            worth_working_on,
+                            datetime.fromisoformat(analyzed_at)
+                            if analyzed_at
+                            else None,
+                        ),
+                    )
 
-        # Add the repo
-        repos.append(repo_dict)
-        self.save_repositories(repos)
-
-        logger.debug("added_or_updated_repository", name=name)
+                conn.commit()
+                logger.debug("added_or_updated_repository", name=repo_dict.get("name"))
+        except Exception as e:
+            logger.error(
+                "failed_to_add_or_update_repository",
+                name=repo_dict.get("name"),
+                error=str(e),
+            )
+            raise
 
     def get_approved(self) -> list[dict[str, Any]]:
         """Get repositories marked as worth working on.
@@ -128,8 +208,20 @@ class RepositoryStore:
         Returns:
             List of repository dictionaries where worth_working_on is True.
         """
-        repos = self.load_repositories()
-        return [r for r in repos if r.get("worth_working_on") is True]
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM repositories
+                        WHERE worth_working_on = TRUE
+                    """
+                    )
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
+        except Exception as e:
+            logger.error("failed_to_get_approved", error=str(e))
+            return []
 
     def get_rejected(self) -> list[dict[str, Any]]:
         """Get repositories marked as NOT worth working on.
@@ -137,14 +229,38 @@ class RepositoryStore:
         Returns:
             List of repository dictionaries where worth_working_on is False.
         """
-        repos = self.load_repositories()
-        return [r for r in repos if r.get("worth_working_on") is False]
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM repositories
+                        WHERE worth_working_on = FALSE
+                    """
+                    )
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
+        except Exception as e:
+            logger.error("failed_to_get_rejected", error=str(e))
+            return []
 
     def get_unanalyzed(self) -> list[dict[str, Any]]:
         """Get repositories that haven't been analyzed yet.
 
         Returns:
-            List of repository dictionaries where worth_working_on is None/null.
+            List of repository dictionaries where worth_working_on is NULL.
         """
-        repos = self.load_repositories()
-        return [r for r in repos if r.get("worth_working_on") is None]
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM repositories
+                        WHERE worth_working_on IS NULL
+                    """
+                    )
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
+        except Exception as e:
+            logger.error("failed_to_get_unanalyzed", error=str(e))
+            return []

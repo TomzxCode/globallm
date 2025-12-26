@@ -1,50 +1,35 @@
-"""Persistent issue storage."""
+"""Persistent issue storage using PostgreSQL."""
 
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-import yaml
+from psycopg.rows import dict_row
+from psycopg.types.json import Json
 from structlog import get_logger
 
+from globallm.storage.db import get_connection
 
 logger = get_logger(__name__)
 
-# Storage directory (XDG Data Home)
-STATE_DIR = Path.home() / ".local" / "share" / "globallm"
-STATE_FILE = STATE_DIR / "issues.yaml"
-
 
 class IssueStore:
-    """Persistent storage for prioritized issues."""
-
-    def __init__(self, state_file: Path | None = None) -> None:
-        """Initialize the issue store.
-
-        Args:
-            state_file: Path to the state file. Defaults to ~/.local/share/globallm/issues.yaml
-        """
-        self._state_file = state_file or STATE_FILE
-        self._ensure_dir()
-
-    def _ensure_dir(self) -> None:
-        """Ensure the state directory exists."""
-        self._state_file.parent.mkdir(parents=True, exist_ok=True)
+    """Persistent storage for prioritized issues using PostgreSQL."""
 
     def load_issues(self) -> list[dict[str, Any]]:
         """Load all issues from storage.
 
         Returns:
-            List of issue dictionaries, or empty list if file doesn't exist.
+            List of issue dictionaries.
         """
-        if not self._state_file.exists():
-            logger.debug("no_issue_file", path=str(self._state_file))
-            return []
-
         try:
-            with self._state_file.open("r") as f:
-                data = yaml.safe_load(f) or {}
-            return data.get("issues", [])
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute("""
+                        SELECT data FROM issues
+                        ORDER BY (data->>'priority')::numeric DESC NULLS LAST
+                    """)
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
         except Exception as e:
             logger.error("failed_to_load_issues", error=str(e))
             return []
@@ -52,22 +37,44 @@ class IssueStore:
     def save_issues(
         self, issues: list[dict[str, Any]], prioritized_at: datetime | None = None
     ) -> None:
-        """Save issues to storage.
+        """Save issues to storage (replaces all existing issues).
 
         Args:
             issues: List of issue dictionaries to save.
             prioritized_at: Timestamp when these issues were prioritized.
         """
-        data: dict[str, Any] = {
-            "issues": issues,
-            "prioritized_at": (prioritized_at or datetime.now()).isoformat(),
-        }
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    # Delete all existing issues
+                    cur.execute("DELETE FROM issues")
 
-        self._ensure_dir()
-        with self._state_file.open("w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+                    # Insert new issues in batch
+                    if issues:
+                        timestamp = (prioritized_at or datetime.now()).isoformat()
+                        for issue in issues:
+                            # Add metadata to the data field
+                            issue.setdefault("_metadata", {})["prioritized_at"] = (
+                                timestamp
+                            )
 
-        logger.info("saved_issues", count=len(issues), path=str(self._state_file))
+                            cur.execute(
+                                """
+                                INSERT INTO issues (repository, number, data)
+                                VALUES (%s, %s, %s)
+                            """,
+                                (
+                                    issue.get("repository"),
+                                    issue.get("number"),
+                                    Json(issue),
+                                ),
+                            )
+
+                conn.commit()
+                logger.info("saved_issues", count=len(issues))
+        except Exception as e:
+            logger.error("failed_to_save_issues", error=str(e))
+            raise
 
     def get_issue(self, repository: str, number: int) -> dict[str, Any] | None:
         """Get an issue by repository and number.
@@ -79,11 +86,27 @@ class IssueStore:
         Returns:
             Issue dictionary, or None if not found.
         """
-        issues = self.load_issues()
-        for issue in issues:
-            if issue.get("repository") == repository and issue.get("number") == number:
-                return issue
-        return None
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM issues
+                        WHERE repository = %s AND number = %s
+                    """,
+                        (repository, number),
+                    )
+
+                    result = cur.fetchone()
+                    return result["data"] if result else None
+        except Exception as e:
+            logger.error(
+                "failed_to_get_issue",
+                repository=repository,
+                number=number,
+                error=str(e),
+            )
+            return None
 
     def get_issues_by_repository(self, repository: str) -> list[dict[str, Any]]:
         """Get all issues for a repository.
@@ -94,8 +117,27 @@ class IssueStore:
         Returns:
             List of issue dictionaries for the repository.
         """
-        issues = self.load_issues()
-        return [i for i in issues if i.get("repository") == repository]
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM issues
+                        WHERE repository = %s
+                        ORDER BY (data->>'priority')::numeric DESC NULLS LAST
+                    """,
+                        (repository,),
+                    )
+
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
+        except Exception as e:
+            logger.error(
+                "failed_to_get_issues_by_repository",
+                repository=repository,
+                error=str(e),
+            )
+            return []
 
     def get_top_issues(self, limit: int = 20) -> list[dict[str, Any]]:
         """Get top prioritized issues.
@@ -104,11 +146,25 @@ class IssueStore:
             limit: Maximum number of issues to return.
 
         Returns:
-            List of issue dictionaries sorted by priority_score (descending).
+            List of issue dictionaries sorted by priority (descending).
         """
-        issues = self.load_issues()
-        issues.sort(key=lambda i: i.get("priority_score", 0), reverse=True)
-        return issues[:limit]
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data FROM issues
+                        ORDER BY (data->>'priority')::numeric DESC NULLS LAST
+                        LIMIT %s
+                    """,
+                        (limit,),
+                    )
+
+                    results = cur.fetchall()
+                    return [row["data"] for row in results]
+        except Exception as e:
+            logger.error("failed_to_get_top_issues", error=str(e))
+            return []
 
     def add_or_update(self, issue_dict: dict[str, Any]) -> None:
         """Add a new issue or update an existing one.
@@ -116,19 +172,34 @@ class IssueStore:
         Args:
             issue_dict: Issue dictionary to add or update.
         """
-        issues = self.load_issues()
-        repository = issue_dict.get("repository")
-        number = issue_dict.get("number")
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO issues (repository, number, data)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (repository, number)
+                        DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+                    """,
+                        (
+                            issue_dict.get("repository"),
+                            issue_dict.get("number"),
+                            Json(issue_dict),
+                        ),
+                    )
 
-        # Remove existing issue with same repository and number
-        issues = [
-            i
-            for i in issues
-            if not (i.get("repository") == repository and i.get("number") == number)
-        ]
-
-        # Add the issue
-        issues.append(issue_dict)
-        self.save_issues(issues)
-
-        logger.debug("added_or_updated_issue", repository=repository, number=number)
+                conn.commit()
+                logger.debug(
+                    "added_or_updated_issue",
+                    repository=issue_dict.get("repository"),
+                    number=issue_dict.get("number"),
+                )
+        except Exception as e:
+            logger.error(
+                "failed_to_add_or_update_issue",
+                repository=issue_dict.get("repository"),
+                number=issue_dict.get("number"),
+                error=str(e),
+            )
+            raise
