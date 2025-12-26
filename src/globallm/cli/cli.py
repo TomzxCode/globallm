@@ -48,8 +48,9 @@ def main(
 
 
 # Import and register commands (must come after app is defined)
-from . import (  # noqa: E402
+from globallm.cli import (  # noqa: E402
     analyze,
+    assign,
     budget,
     config,
     database,
@@ -72,6 +73,7 @@ app.add_typer(redundancy.app)
 app.add_typer(status.app)
 app.add_typer(user.app)
 
+app.add_typer(assign.app, rich_help_panel="Command Groups")
 app.add_typer(budget.app, rich_help_panel="Command Groups")
 app.add_typer(config.app, rich_help_panel="Command Groups")
 app.add_typer(database.app, rich_help_panel="Command Groups")

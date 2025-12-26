@@ -10,7 +10,11 @@ from globallm.storage.db import get_connection
 logger = get_logger(__name__)
 
 # Schema version for future migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+# Migration definitions
+# Each migration is a (from_version, to_version, description, sql_function) tuple
+MIGRATIONS: list[tuple[int, int, str, Any]] = []
 
 # SQL schema definition
 SCHEMA_SQL = """
@@ -28,6 +32,11 @@ CREATE TABLE IF NOT EXISTS issues (
     data JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    -- Assignment tracking
+    assigned_to VARCHAR(255) NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE NULL,
+    last_heartbeat_at TIMESTAMP WITH TIME ZONE NULL,
+    assignment_status VARCHAR(50) DEFAULT 'available',
     UNIQUE(repository, number)
 );
 
@@ -35,6 +44,9 @@ CREATE TABLE IF NOT EXISTS issues (
 CREATE INDEX IF NOT EXISTS idx_issues_repository ON issues(repository);
 CREATE INDEX IF NOT EXISTS idx_issues_repository_number ON issues(repository, number);
 CREATE INDEX IF NOT EXISTS idx_issues_data ON issues USING GIN (data);
+CREATE INDEX IF NOT EXISTS idx_issues_assignment_status ON issues(assignment_status);
+CREATE INDEX IF NOT EXISTS idx_issues_assigned_to ON issues(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_issues_last_heartbeat ON issues(last_heartbeat_at);
 
 -- Repositories table
 CREATE TABLE IF NOT EXISTS repositories (
@@ -147,3 +159,114 @@ def get_status() -> dict[str, Any]:
         status["error"] = str(e)
 
     return status
+
+
+def migrate_1_to_2() -> None:
+    """Migration from schema version 1 to 2.
+
+    Adds assignment tracking columns to the issues table.
+    """
+    sql = """
+    -- Add assignment tracking columns
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS assigned_to VARCHAR(255) NULL;
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP WITH TIME ZONE NULL;
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMP WITH TIME ZONE NULL;
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS assignment_status VARCHAR(50) DEFAULT 'available';
+
+    -- Create indexes for assignment queries
+    CREATE INDEX IF NOT EXISTS idx_issues_assignment_status ON issues(assignment_status);
+    CREATE INDEX IF NOT EXISTS idx_issues_assigned_to ON issues(assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_issues_last_heartbeat ON issues(last_heartbeat_at);
+
+    -- Set default status for existing issues
+    UPDATE issues SET assignment_status = 'available' WHERE assignment_status IS NULL;
+    """
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+        conn.commit()
+    logger.info("migration_1_to_2_completed")
+
+
+# Register migrations
+MIGRATIONS.append((1, 2, "Add issue assignment tracking", migrate_1_to_2))
+
+
+def get_pending_migrations() -> list[tuple[int, int, str, Any]]:
+    """Get list of pending migrations based on current schema version.
+
+    Returns:
+        List of migrations that need to be applied.
+    """
+    current_version = get_schema_version()
+    if current_version is None:
+        return []
+
+    pending = [
+        (from_v, to_v, desc, fn)
+        for from_v, to_v, desc, fn in MIGRATIONS
+        if from_v >= current_version and to_v > current_version
+    ]
+
+    # Sort by version number
+    pending.sort(key=lambda x: x[0])
+    return pending
+
+
+def migrate() -> None:
+    """Run pending database migrations.
+
+    Raises:
+        Exception: If migration fails.
+    """
+    pending = get_pending_migrations()
+
+    if not pending:
+        logger.info("no_pending_migrations", current_version=get_schema_version())
+        return
+
+    logger.info(
+        "pending_migrations_found",
+        count=len(pending),
+        current_version=get_schema_version(),
+    )
+
+    for from_version, to_version, description, migration_fn in pending:
+        logger.info(
+            "running_migration",
+            from_version=from_version,
+            to_version=to_version,
+            description=description,
+        )
+
+        try:
+            migration_fn()
+        except Exception as e:
+            logger.error(
+                "migration_failed",
+                from_version=from_version,
+                to_version=to_version,
+                error=str(e),
+            )
+            raise
+
+        # Record the new schema version
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO schema_migrations (version)
+                    VALUES (%s)
+                    ON CONFLICT (version) DO NOTHING
+                """,
+                    (to_version,),
+                )
+            conn.commit()
+
+        logger.info("migration_applied", to_version=to_version)
+
+    logger.info(
+        "all_migrations_completed",
+        final_version=pending[-1][1] if pending else get_schema_version(),
+    )

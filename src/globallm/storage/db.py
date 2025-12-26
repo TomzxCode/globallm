@@ -36,7 +36,7 @@ class Database:
                 cls._get_dsn(),
                 min_size=2,  # Minimum connections
                 max_size=10,  # Maximum connections per process
-                timeout=30,  # Connection timeout in seconds
+                timeout=5,  # Connection timeout in seconds
                 max_idle=300,  # Close idle connections after 5 minutes
                 reconnect_timeout=5,
             )

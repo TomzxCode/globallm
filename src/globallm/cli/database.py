@@ -3,7 +3,12 @@
 import typer
 from rich import print as rprint
 
-from globallm.storage.init_db import get_status, init_database
+from globallm.storage.init_db import (
+    get_pending_migrations,
+    get_status,
+    init_database,
+    migrate as run_migrations,
+)
 from globallm.storage.db import Database
 
 app = typer.Typer(name="database", help="Database management commands")
@@ -29,6 +34,30 @@ def init(
         rprint("[green]Database initialized successfully.[/green]")
     except Exception as e:
         rprint(f"[red]Failed to initialize database: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def migrate() -> None:
+    """Run pending database migrations."""
+    pending = get_pending_migrations()
+
+    if not pending:
+        rprint("[green]No pending migrations.[/green]")
+        rprint(f"  Current schema version: [cyan]{get_status().get('schema_version', 'Unknown')}[/cyan]")
+        raise typer.Exit(0)
+
+    rprint(f"[cyan]Found {len(pending)} pending migration(s):[/cyan]")
+    for from_v, to_v, desc, _ in pending:
+        rprint(f"  {from_v} → {to_v}: {desc}")
+
+    rprint("\n[yellow]Running migrations...[/yellow]")
+    try:
+        run_migrations()
+        rprint("[green]Migrations completed successfully![/green]")
+        rprint(f"  New schema version: [cyan]{get_status().get('schema_version', 'Unknown')}[/cyan]")
+    except Exception as e:
+        rprint(f"[red]Migration failed: {e}[/red]")
         raise typer.Exit(1)
 
 
