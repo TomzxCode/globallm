@@ -22,6 +22,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Logging
+logs/
+
 # Distribution
 dist/
 build/

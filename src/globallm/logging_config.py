@@ -1,7 +1,9 @@
 """Logging configuration for GlobalLM."""
 
 import logging
+import os
 import sys
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -33,14 +35,29 @@ def configure_logging(level: int = logging.INFO) -> None:
         cache_logger_on_first_use=True,
     )
 
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = structlog.stdlib.ProcessorFormatter(
+    # Create logs directory
+    logs_dir = "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_formatter = structlog.stdlib.ProcessorFormatter(
         processor=structlog.dev.ConsoleRenderer(colors=True),
     )
-    handler.setFormatter(formatter)
+    console_handler.setFormatter(console_formatter)
+
+    # File handler
+    log_filename = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + f"-{os.getpid()}.log"
+    log_path = os.path.join(logs_dir, log_filename)
+    file_handler = logging.FileHandler(log_path)
+    file_formatter = structlog.stdlib.ProcessorFormatter(
+        processor=structlog.dev.ConsoleRenderer(colors=False),
+    )
+    file_handler.setFormatter(file_formatter)
 
     root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
     root_logger.setLevel(level)
 
     # Silence noisy loggers
