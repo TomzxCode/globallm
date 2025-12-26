@@ -5,11 +5,6 @@ from pathlib import Path
 import typer
 from dotenv import load_dotenv
 
-from globallm.logging_config import configure_logging, get_logger
-from globallm.config.loader import load_config
-
-logger = get_logger(__name__)
-
 app = typer.Typer(
     name="globallm",
     help="Scan GitHub to identify impactful libraries and contribute to their success",
@@ -29,6 +24,7 @@ app.add_typer(budget_app, name="budget", help="Budget management")
 
 def config_callback(log_level: str) -> None:
     """Configure logging based on log level."""
+    from globallm.logging_config import configure_logging  # noqa: PLC0415
     configure_logging(log_level)
 
 
@@ -54,6 +50,8 @@ def main(
 
     # Load config if specified
     if config_file:
+        from globallm.config.loader import load_config  # noqa: PLC0415
+
         ctx.ensure_object(dict)
         ctx.obj["config_path"] = Path(config_file)
         load_config(Path(config_file))
@@ -129,8 +127,11 @@ def parse_args():
 def run(args) -> None:
     """Run the legacy scanner command."""
     from globallm.scanner import GitHubScanner, Domain
+    from globallm.logging_config import get_logger  # noqa: PLC0415
     import os
     import time
+
+    logger = get_logger(__name__)
 
     if args.verbose:
         logger.debug("Verbose mode enabled")

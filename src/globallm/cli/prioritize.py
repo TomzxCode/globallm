@@ -1,15 +1,15 @@
 """Prioritize command."""
 
 import json
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
 from rich.table import Table
 from rich.console import Console
 
-from globallm.config.loader import load_config
-from globallm.storage.repository_store import RepositoryStore
-from globallm.storage.issue_store import IssueStore
+if TYPE_CHECKING:
+    from globallm.storage.repository_store import RepositoryStore
 
 app = typer.Typer(help="Prioritize issues across repositories")
 
@@ -31,6 +31,9 @@ def prioritize(
     from globallm.issues.fetcher import IssueFetcher
     from globallm.issues.analyzer import IssueAnalyzer
     from globallm.llm.claude import ClaudeLLM
+    from globallm.config.loader import load_config
+    from globallm.storage.repository_store import RepositoryStore
+    from globallm.storage.issue_store import IssueStore
     from github import Github
     import os
 

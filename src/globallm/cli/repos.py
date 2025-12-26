@@ -1,12 +1,14 @@
 """Repos command for managing stored repositories."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING, Any, Callable
 
 import typer
 from rich import print as rprint
 from rich.table import Table
 
-from globallm.storage.repository_store import RepositoryStore
+if TYPE_CHECKING:
+    pass
 
 app = typer.Typer(help="Manage stored repositories")
 
@@ -20,6 +22,8 @@ def list(
 
     Shows repositories from the store with their analysis status.
     """
+    from globallm.storage.repository_store import RepositoryStore  # noqa: PLC0415
+
     store = RepositoryStore()
 
     # Get repositories based on filter
@@ -50,7 +54,7 @@ def list(
     _display_table(repos, title, rprint)
 
 
-def _display_table(repos: list, title: str, rprint) -> None:
+def _display_table(repos: list[dict[str, Any]], title: str, rprint: Callable) -> None:
     """Display repositories in a table."""
     table = Table(title=title)
     table.add_column("Repository", style="cyan")
@@ -102,6 +106,8 @@ def show(
     repo: str = typer.Argument(..., help="Repository name (owner/repo)"),
 ) -> None:
     """Show detailed information about a stored repository."""
+    from globallm.storage.repository_store import RepositoryStore  # noqa: PLC0415
+
     store = RepositoryStore()
     repo_data = store.get_repository(repo)
 
@@ -156,6 +162,8 @@ def remove(
     repo: str = typer.Argument(..., help="Repository name (owner/repo)"),
 ) -> None:
     """Remove a repository from the store."""
+    from globallm.storage.repository_store import RepositoryStore  # noqa: PLC0415
+
     store = RepositoryStore()
 
     if not store.get_repository(repo):

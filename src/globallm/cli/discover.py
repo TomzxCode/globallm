@@ -2,13 +2,16 @@
 
 import time
 from datetime import datetime
+from typing import TYPE_CHECKING, Callable
 
 import typer
 from rich import print as rprint
 
 from globallm.cli.common import _display_results
-from globallm.config.loader import load_config
-from globallm.storage.repository_store import RepositoryStore
+
+if TYPE_CHECKING:
+    from globallm.scanner import RepoMetrics
+    from globallm.storage.repository_store import RepositoryStore
 
 app = typer.Typer(help="Discover repositories by domain and language")
 
@@ -28,6 +31,8 @@ def discover(
     Results are automatically saved to the repository store for later analysis.
     """
     from globallm.scanner import GitHubScanner, Domain
+    from globallm.config.loader import load_config
+    from globallm.storage.repository_store import RepositoryStore
     import os
 
     config = load_config()
@@ -77,7 +82,7 @@ def discover(
     _save_to_store(store, results, rprint)
 
 
-def _save_to_store(store: RepositoryStore, results: list, rprint) -> None:
+def _save_to_store(store: RepositoryStore, results: list[RepoMetrics], rprint: Callable) -> None:
     """Save discovered repositories to store, merging with existing.
 
     Existing repos that have been analyzed (worth_working_on is set) are preserved.

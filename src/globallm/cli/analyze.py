@@ -1,11 +1,14 @@
 """Analyze command."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING, Callable
 
 import typer
 from rich import print as rprint
 
-from globallm.storage.repository_store import RepositoryStore
+if TYPE_CHECKING:
+    from globallm.scanner import RepoMetrics
+    from globallm.storage.repository_store import RepositoryStore
 
 app = typer.Typer(help="Analyze repositories")
 
@@ -20,6 +23,8 @@ def analyze(
     The analysis automatically calculates whether the repository is worth working on
     and updates the repository store.
     """
+    from globallm.storage.repository_store import RepositoryStore  # noqa: PLC0415
+
     store = RepositoryStore()
 
     if repo is None:
@@ -38,7 +43,7 @@ def analyze(
         _analyze_single(repo, store, rprint)
 
 
-def _analyze_single(repo: str, store: RepositoryStore, rprint) -> None:
+def _analyze_single(repo: str, store: RepositoryStore, rprint: Callable) -> None:
     """Analyze a single repository."""
     from globallm.scanner import GitHubScanner
     import os
@@ -125,12 +130,12 @@ def _generate_analysis_reason(health: float, impact: float, worth_working_on: bo
 def _update_store(
     store: RepositoryStore,
     repo_name: str,
-    metrics,
+    metrics: RepoMetrics,
     health_score: float,
     impact_score: float,
     worth_working_on: bool,
     analysis_reason: str,
-    rprint,
+    rprint: Callable,
 ) -> None:
     """Update the repository store with analysis results."""
     # Get existing repo data

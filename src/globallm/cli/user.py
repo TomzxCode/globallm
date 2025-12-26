@@ -1,12 +1,14 @@
 """User repository analysis command."""
 
 import time
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
 from rich.table import Table
 
-from globallm.scanner import RepoMetrics
+if TYPE_CHECKING:
+    from globallm.scanner import RepoMetrics
 
 app = typer.Typer(help="Analyze user repositories")
 

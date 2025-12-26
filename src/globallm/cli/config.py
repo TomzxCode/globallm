@@ -3,8 +3,6 @@
 import typer
 from rich import print as rprint
 
-from globallm.config.loader import load_config, save_config, get_config_path
-
 app = typer.Typer(help="Configuration management")
 
 
@@ -13,6 +11,8 @@ def show(
     key: str = typer.Option(None, help="Show specific config key"),
 ) -> None:
     """Show current configuration."""
+    from globallm.config.loader import load_config, get_config_path  # noqa: PLC0415
+
     config = load_config()
 
     if key:
@@ -45,6 +45,8 @@ def set(
     value: str = typer.Argument(..., help="New value"),
 ) -> None:
     """Set a configuration value."""
+    from globallm.config.loader import load_config, save_config  # noqa: PLC0415
+
     config = load_config()
     keys = key.split(".")
 
@@ -92,4 +94,6 @@ def set(
 @app.command()
 def path() -> None:
     """Show the configuration file path."""
+    from globallm.config.loader import get_config_path  # noqa: PLC0415
+
     rprint(f"{get_config_path()}")

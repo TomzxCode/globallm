@@ -3,8 +3,6 @@
 import typer
 from rich import print as rprint
 
-from globallm.config.loader import load_config
-
 app = typer.Typer(help="Show system status and statistics")
 
 
@@ -14,6 +12,8 @@ def status(
     dashboard: bool = typer.Option(False, "--dashboard", help="Show dashboard"),
 ) -> None:
     """Show system status and statistics."""
+    from globallm.config.loader import load_config  # noqa: PLC0415
+
     config = load_config()
 
     if dashboard:

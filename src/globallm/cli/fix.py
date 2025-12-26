@@ -5,7 +5,6 @@ import os
 
 import typer
 from rich import print as rprint
-from github import Github
 
 app = typer.Typer(help="Analyze an issue and generate a fix")
 
@@ -25,6 +24,7 @@ def fix(
     from globallm.issues.analyzer import IssueAnalyzer
     from globallm.solution.code_generator import CodeGenerator
     from globallm.llm.claude import ClaudeLLM
+    from github import Github
 
     token = os.getenv("GITHUB_TOKEN")
     if not token:
