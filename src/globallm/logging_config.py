@@ -45,8 +45,9 @@ def configure_logging(level: int = logging.INFO) -> None:
         processor=structlog.dev.ConsoleRenderer(colors=True),
     )
     console_handler.setFormatter(console_formatter)
+    console_handler.setLevel(level)
 
-    # File handler
+    # File handler - always at DEBUG level
     log_filename = datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + f"-{os.getpid()}.log"
     log_path = os.path.join(logs_dir, log_filename)
     file_handler = logging.FileHandler(log_path)
@@ -54,11 +55,12 @@ def configure_logging(level: int = logging.INFO) -> None:
         processor=structlog.dev.ConsoleRenderer(colors=False),
     )
     file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.DEBUG)
 
     root_logger = logging.getLogger()
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
-    root_logger.setLevel(level)
+    root_logger.setLevel(logging.DEBUG)  # Root must be DEBUG to allow file handler to capture everything
 
     # Silence noisy loggers
     logging.getLogger("github").setLevel(logging.WARNING)
