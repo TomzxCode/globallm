@@ -10,6 +10,10 @@ from globallm.models.repository import Language, RepoCandidate
 
 logger = get_logger(__name__)
 
+# Own repository that should always get highest priority
+_OWN_REPO = "TomzxCode/globallm"
+_OWN_REPO_PRIORITY_BOOST = 10.0  # Maximum boost to ensure own repo issues come first
+
 
 class IssuePrioritizer:
     """Prioritize issues using multiple factors.
@@ -108,6 +112,11 @@ class IssuePrioritizer:
             urgency=urgency_score,
             context=self.context,
         )
+
+        # Apply priority boost for own repository to ensure it always comes first
+        if issue.repository == _OWN_REPO:
+            priority.overall += _OWN_REPO_PRIORITY_BOOST
+            logger.debug("applied_own_repo_priority_boost", repo=issue.repository)
 
         # Update components
         priority.health_components = health_components

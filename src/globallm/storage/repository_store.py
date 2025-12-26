@@ -11,9 +11,95 @@ from globallm.storage.db import get_connection
 
 logger = get_logger(__name__)
 
+# Special repository that must always be present and approved
+_OWN_REPO = "TomzxCode/globallm"
+
 
 class RepositoryStore:
     """Persistent storage for discovered and analyzed repositories using PostgreSQL."""
+
+    def _ensure_own_repo(self) -> None:
+        """Ensure the own repository (TomzxCode/globallm) exists with worth_working_on=True."""
+        try:
+            with get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cur:
+                    cur.execute(
+                        """
+                        SELECT data, worth_working_on FROM repositories WHERE name = %s
+                    """,
+                        (_OWN_REPO,),
+                    )
+                    result = cur.fetchone()
+
+                    now = datetime.now()
+
+                    if result is None:
+                        # Repository doesn't exist, create it
+                        data = {
+                            "name": _OWN_REPO,
+                            "owner": "TomzxCode",
+                            "description": "AI-powered repository analysis and management tool",
+                            "language": "python",
+                            "stars": 0,
+                            "forks": 0,
+                            "open_issues": 0,
+                            "watchers": 0,
+                            "subscribers": 0,
+                            "dependents": 0,
+                            "health_score": {
+                                "commit_velocity": 1.0,
+                                "issue_resolution_rate": 1.0,
+                                "ci_status": 1.0,
+                                "contributor_diversity": 1.0,
+                                "documentation_quality": 1.0,
+                            },
+                            "last_commit_at": now.isoformat(),
+                            "has_ci": True,
+                            "has_tests": True,
+                            "test_coverage": None,
+                            "has_type_hints": True,
+                            "has_docs": True,
+                            "topics": [],
+                            "license": None,
+                            "archived": False,
+                            "default_branch": "main",
+                            "worth_working_on": True,
+                            "analyzed_at": now.isoformat(),
+                            "analysis_reason": "Own repository - always worth working on",
+                        }
+                        cur.execute(
+                            """
+                            INSERT INTO repositories (name, data, worth_working_on, analyzed_at)
+                            VALUES (%s, %s, %s, %s)
+                        """,
+                            (_OWN_REPO, Json(data), True, now),
+                        )
+                        logger.info("created_own_repo", name=_OWN_REPO)
+                    elif not result["worth_working_on"]:
+                        # Repository exists but not marked as worth working on - update it
+                        data = result["data"]
+                        data["worth_working_on"] = True
+                        data["analyzed_at"] = now.isoformat()
+                        data["analysis_reason"] = (
+                            "Own repository - always worth working on"
+                        )
+                        cur.execute(
+                            """
+                            UPDATE repositories
+                            SET data = %s,
+                                worth_working_on = %s,
+                                analyzed_at = %s,
+                                updated_at = NOW()
+                            WHERE name = %s
+                        """,
+                            (_OWN_REPO, Json(data), True, now, _OWN_REPO),
+                        )
+                        logger.info("updated_own_repo_approved", name=_OWN_REPO)
+
+                conn.commit()
+        except Exception as e:
+            logger.error("failed_to_ensure_own_repo", error=str(e))
+            raise
 
     def load_repositories(self) -> list[dict[str, Any]]:
         """Load all repositories from storage.
@@ -21,6 +107,9 @@ class RepositoryStore:
         Returns:
             List of repository dictionaries.
         """
+        # Ensure own repo is always present with worth_working_on=True
+        self._ensure_own_repo()
+
         try:
             with get_connection() as conn:
                 with conn.cursor(row_factory=dict_row) as cur:
