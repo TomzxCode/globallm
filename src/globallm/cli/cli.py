@@ -11,16 +11,6 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Config subcommand app
-config_app = typer.Typer(name="config", help="Configuration management")
-
-# Budget subcommand app
-budget_app = typer.Typer(name="budget", help="Budget management")
-
-# Add subcommands
-app.add_typer(config_app, name="config", help="Configuration management")
-app.add_typer(budget_app, name="budget", help="Budget management")
-
 
 def config_callback(log_level: str) -> None:
     """Configure logging based on log level."""
@@ -59,34 +49,33 @@ def main(
 
 # Import and register commands (must come after app is defined)
 from . import (  # noqa: E402
+    analyze,
+    budget,
+    config,
     database,
     discover,
-    analyze,
-    redundancy,
-    status,
+    fix,
     issues,
     prioritize,
-    fix,
-    user,
+    redundancy,
     repos,
+    status,
+    user,
 )
 
-app.add_typer(database.app, name="database", help="Database management")
 app.add_typer(discover.app)
 app.add_typer(analyze.app)
-app.add_typer(redundancy.app)
-app.add_typer(status.app)
-app.add_typer(issues.app)
 app.add_typer(prioritize.app)
 app.add_typer(fix.app)
+app.add_typer(issues.app)
+app.add_typer(redundancy.app)
+app.add_typer(status.app)
 app.add_typer(user.app)
-app.add_typer(repos.app)
 
-from . import config, budget  # noqa: E402
-
-config_app.add_typer(config.app, help="Configuration management")
-budget_app.add_typer(budget.app, help="Budget management")
-
+app.add_typer(budget.app, rich_help_panel="Command Groups")
+app.add_typer(config.app, rich_help_panel="Command Groups")
+app.add_typer(database.app, rich_help_panel="Command Groups")
+app.add_typer(repos.app, rich_help_panel="Command Groups")
 
 # Legacy argparse support for backward compatibility
 def parse_args():

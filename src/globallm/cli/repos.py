@@ -10,7 +10,7 @@ from rich.table import Table
 if TYPE_CHECKING:
     pass
 
-app = typer.Typer(help="Manage stored repositories")
+app = typer.Typer(name="repos", help="Manage stored repositories")
 
 
 @app.command()

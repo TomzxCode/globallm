@@ -6,7 +6,7 @@ from rich import print as rprint
 from globallm.storage.init_db import get_status, init_database
 from globallm.storage.db import Database
 
-app = typer.Typer(help="Database management commands")
+app = typer.Typer(name="database", help="Database management commands")
 
 
 @app.command()

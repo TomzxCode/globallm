@@ -3,7 +3,7 @@
 import typer
 from rich import print as rprint
 
-app = typer.Typer(help="Budget management")
+app = typer.Typer(name="budget", help="Budget management")
 
 
 @app.command()

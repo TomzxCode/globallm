@@ -3,7 +3,7 @@
 import typer
 from rich import print as rprint
 
-app = typer.Typer(help="Configuration management")
+app = typer.Typer(name="config", help="Configuration management")
 
 
 @app.command()
