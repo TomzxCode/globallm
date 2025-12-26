@@ -23,6 +23,7 @@ def analyze_user(
 ) -> None:
     """Analyze all repositories owned by a user."""
     from globallm.scanner import GitHubScanner
+    from globallm.github import create_github_client
     import os
 
     token = os.getenv("GITHUB_TOKEN")
@@ -31,7 +32,7 @@ def analyze_user(
     rprint(f"  Min stars: {min_stars:,}")
     rprint(f"  Include forks: {include_forks}")
 
-    scanner = GitHubScanner(token)
+    scanner = GitHubScanner(create_github_client(token))
 
     start_time = time.time()
     results = scanner.analyze_user_repos(

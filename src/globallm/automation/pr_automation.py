@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from github import Github
 from github.Branch import Branch
 from github.GithubException import GithubException
 from github.Repository import Repository
@@ -43,18 +44,16 @@ class PRAutomation:
 
     def __init__(
         self,
-        github_token: str,
+        github_client: Github,
         ci_monitor: CIMonitor | None = None,
     ) -> None:
         """Initialize PR automation.
 
         Args:
-            github_token: GitHub API token
+            github_client: PyGithub Github instance
             ci_monitor: Optional CI monitor
         """
-        from github import Github
-
-        self.github = Github(github_token)
+        self.github = github_client
         self.ci_monitor = ci_monitor or CIMonitor()
 
     def create_pr(

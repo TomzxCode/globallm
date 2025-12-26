@@ -33,6 +33,7 @@ def discover(
     from globallm.scanner import GitHubScanner, Domain
     from globallm.config.loader import load_config
     from globallm.storage.repository_store import RepositoryStore
+    from globallm.github import create_github_client
     import os
 
     config = load_config()
@@ -52,7 +53,7 @@ def discover(
     rprint(f"  Min dependents: {min_dependents:,}")
     rprint(f"  Library only: {library_only}")
 
-    scanner = GitHubScanner(token, use_cache=use_cache)
+    scanner = GitHubScanner(create_github_client(token), use_cache=use_cache)
 
     try:
         domain_enum = Domain(domain)

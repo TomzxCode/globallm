@@ -19,9 +19,8 @@ def issues(
     from globallm.issues.analyzer import IssueAnalyzer
     from globallm.budget.budget_manager import BudgetManager
     from globallm.models.issue import IssueCategory
+    from globallm.github import create_github_client
     import os
-
-    from github import Github
 
     token = os.getenv("GITHUB_TOKEN")
 
@@ -34,7 +33,7 @@ def issues(
         raise typer.Exit(1)
 
     # Fetch issues
-    github_client = Github(token)
+    github_client = create_github_client(token)
     fetcher = IssueFetcher(github_client)
     issues = fetcher.fetch_repo_issues(repo, state=state, limit=limit)
 

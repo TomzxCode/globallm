@@ -118,16 +118,19 @@ class GitHubScanner:
 
     def __init__(
         self,
-        token: str | None = None,
+        github_client: Github,
         cache_dir: Path | None = None,
         use_cache: bool = True,
     ) -> None:
-        """Initialize scanner with optional GitHub token."""
-        settings = {
-            "per_page": 100,
-        }
-        self.github = Github(token, **settings) if token else Github(**settings)
-        self.authenticated = bool(token)
+        """Initialize scanner with a GitHub client.
+
+        Args:
+            github_client: PyGithub Github instance
+            cache_dir: Optional cache directory
+            use_cache: Whether to use caching
+        """
+        self.github = github_client
+        self.authenticated = bool(github_client)  # TODO: proper check
         self.cache_dir = cache_dir or self.CACHE_DIR
         self.use_cache = use_cache
         if self.authenticated:

@@ -116,6 +116,7 @@ def parse_args():
 def run(args) -> None:
     """Run the legacy scanner command."""
     from globallm.scanner import GitHubScanner, Domain
+    from globallm.github import create_github_client
     from globallm.logging_config import get_logger  # noqa: PLC0415
     import os
     import time
@@ -133,8 +134,10 @@ def run(args) -> None:
             "No GITHUB_TOKEN found - using unauthenticated API (rate limited)"
         )
 
+    github_client = create_github_client(token)
+
     if args.clear_cache:
-        scanner = GitHubScanner(token)
+        scanner = GitHubScanner(github_client)
         scanner.clear_cache()
         print("Cache cleared.")
         return
@@ -148,7 +151,7 @@ def run(args) -> None:
         use_cache=use_cache,
     )
 
-    scanner = GitHubScanner(token, use_cache=use_cache)
+    scanner = GitHubScanner(github_client, use_cache=use_cache)
 
     domain = Domain(args.domain)
 

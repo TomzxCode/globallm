@@ -24,7 +24,7 @@ def fix(
     from globallm.issues.analyzer import IssueAnalyzer
     from globallm.solution.code_generator import CodeGenerator
     from globallm.llm.claude import ClaudeLLM
-    from github import Github
+    from globallm.github import create_github_client
 
     token = os.getenv("GITHUB_TOKEN")
     if not token:
@@ -62,7 +62,7 @@ def fix(
     engine = SolutionEngine(analyzer=analyzer, code_generator=code_generator)
 
     # Fetch the issue
-    github_client = Github(token)
+    github_client = create_github_client(token)
     fetcher = IssueFetcher(github_client)
     issue = fetcher.fetch_single_issue(repo, int(issue_number))
 
@@ -94,7 +94,7 @@ def fix(
 
     # Create PR
     rprint("\n[yellow]Phase 2: Creating PR...[/yellow]")
-    pr_automation = PRAutomation(token)
+    pr_automation = PRAutomation(github_client)
     pr_result = pr_automation.create_pr(
         solution,
         base_branch=branch,

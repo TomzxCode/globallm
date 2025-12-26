@@ -46,12 +46,13 @@ def analyze(
 def _analyze_single(repo: str, store: RepositoryStore, rprint: Callable) -> None:
     """Analyze a single repository."""
     from globallm.scanner import GitHubScanner
+    from globallm.github import create_github_client
     import os
 
     token = os.getenv("GITHUB_TOKEN")
     rprint(f"[bold cyan]Analyzing {repo}...[/bold cyan]")
 
-    scanner = GitHubScanner(token)
+    scanner = GitHubScanner(create_github_client(token))
     metrics = scanner.analyze_repo(repo)
 
     # Calculate health and impact scores

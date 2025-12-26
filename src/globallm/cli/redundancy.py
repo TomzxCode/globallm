@@ -15,10 +15,11 @@ def redundancy(
     from globallm.scanner import GitHubScanner
     from globallm.analysis.redundancy import RedundancyDetector
     from globallm.models.repository import Language
+    from globallm.github import create_github_client
     import os
 
     token = os.getenv("GITHUB_TOKEN")
-    scanner = GitHubScanner(token)
+    scanner = GitHubScanner(create_github_client(token))
     detector = RedundancyDetector()
 
     rprint("[bold cyan]Analyzing repository redundancy...[/bold cyan]")

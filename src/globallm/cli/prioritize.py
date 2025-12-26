@@ -34,11 +34,11 @@ def prioritize(
     from globallm.config.loader import load_config
     from globallm.storage.repository_store import RepositoryStore
     from globallm.storage.issue_store import IssueStore
-    from github import Github
+    from globallm.github import create_github_client
     import os
 
     token = os.getenv("GITHUB_TOKEN")
-    github_client = Github(token)
+    github_client = create_github_client(token)
     config = load_config()
     store = RepositoryStore()
     issue_store = IssueStore()
