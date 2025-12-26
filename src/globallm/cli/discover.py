@@ -21,7 +21,7 @@ def discover(
     min_dependents: int = typer.Option(None, help="Minimum dependents"),
     max_results: int = typer.Option(20, help="Max results to return"),
     use_cache: bool = typer.Option(True, help="Use cache"),
-    library_only: bool = typer.Option(False, help="Only include libraries (filter out apps, docs, etc.)"),
+    library_only: bool = typer.Option(True, help="Only include libraries (filter out apps, docs, etc.)"),
 ) -> None:
     """Discover repositories by domain and language.
 

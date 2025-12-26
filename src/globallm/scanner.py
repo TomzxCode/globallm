@@ -38,6 +38,26 @@ DOMAIN_QUERIES: dict[Domain, str] = {
     Domain.GAMES: "game engine OR unity OR unreal OR game development OR pygame",
 }
 
+# Non-programming languages to filter out (documentation, markup, config, etc.)
+NON_PROGRAMMING_LANGUAGES = {
+    None,
+    "Markdown",
+    "HTML",
+    "CSS",
+    "TeX",
+    "Mustache",
+    "Jupyter Notebook",
+    "Shell",  # Often scripts/config, not libraries
+    "Batchfile",
+    "PowerShell",
+    "Dockerfile",
+    "Makefile",
+    "CMake",
+    "Autoconf",
+    "M4",
+    "GDB",
+}
+
 
 @dataclass
 class RepoMetrics:
@@ -207,6 +227,7 @@ class GitHubScanner:
         repos = self.github.search_repositories(query=query, sort=sort, order=order)
         results: list[RepoMetrics] = []
         failed_count = 0
+        filtered_non_programming = 0
 
         for i, repo in enumerate(repos[:max_results], 1):
             logger.debug(
@@ -216,6 +237,22 @@ class GitHubScanner:
                 name=repo.full_name,
             )
             try:
+                # Filter out non-programming languages BEFORE processing
+                if repo.language in NON_PROGRAMMING_LANGUAGES:
+                    logger.debug(
+                        "filtered_non_programming_language",
+                        repo=repo.full_name,
+                        language=repo.language,
+                    )
+                    filtered_non_programming += 1
+                    continue
+                else:
+                    logger.debug(
+                        "accepted_programming_language",
+                        repo=repo.full_name,
+                        language=repo.language,
+                    )
+
                 metrics = self._calculate_metrics(repo)
                 results.append(metrics)
                 logger.debug(
@@ -236,6 +273,7 @@ class GitHubScanner:
             "repos_fetched",
             successful=len(results),
             failed=failed_count,
+            filtered_non_programming=filtered_non_programming,
             total=max_results,
         )
 
@@ -312,6 +350,15 @@ class GitHubScanner:
                         "skipping_low_stars",
                         repo=repo.full_name,
                         stars=repo.stargazers_count,
+                    )
+                    continue
+
+                # Filter out non-programming languages BEFORE processing
+                if repo.language in NON_PROGRAMMING_LANGUAGES:
+                    logger.debug(
+                        "filtered_non_programming_language",
+                        repo=repo.full_name,
+                        language=repo.language,
                     )
                     continue
 
