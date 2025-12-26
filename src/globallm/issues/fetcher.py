@@ -56,6 +56,9 @@ class IssueFetcher:
                 if i >= limit:
                     break
 
+                # Force the issue to act as if it's complete
+                issue._CompletableGithubObject__completed = True
+
                 # Skip pull requests
                 if issue.pull_request:
                     continue
