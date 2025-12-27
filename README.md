@@ -107,9 +107,14 @@ globallm database init
 # Show database status
 globallm database status
 
+# Run pending migrations (upgrades schema without data loss)
+globallm database migrate
+
 # Close connection pool (cleanup)
 globallm database close
 ```
+
+**Migrations:** When you upgrade to a new version of GlobalLM, run `globallm database migrate` to apply any schema changes. Migrations are non-destructive and preserve your existing data.
 
 ## Usage
 
@@ -344,18 +349,52 @@ globallm prioritize --export json > priorities.json
 Automatically analyze an issue, generate a solution with tests, and create a pull request. Safe changes can auto-merge based on complexity scoring.
 
 ```bash
-# Analyze an issue and generate a fix (creates PR)
-globallm fix https://github.com/owner/repo/issues/123
+# Work on the highest-priority available issue (no URL required)
+globallm fix
+
+# Work on a specific issue URL
+globallm fix --issue-url https://github.com/owner/repo/issues/123
 
 # Dry run (don't actually create PR)
-globallm fix --dry-run https://github.com/owner/repo/issues/123
+globallm fix --dry-run
 
 # Target a specific branch
-globallm fix --branch develop https://github.com/owner/repo/issues/123
+globallm fix --branch develop
 
 # Disable auto-merge for safe changes
-globallm fix --no-auto-merge https://github.com/owner/repo/issues/123
+globallm fix --no-auto-merge
 ```
+
+When running without an issue URL, `globallm fix` automatically claims the highest-priority available issue from the database. Multiple agents can run in parallel without conflicts - each agent gets assigned a unique issue.
+
+### Issue Assignment
+
+Manage distributed issue assignments when running multiple agents in parallel. Issues are automatically assigned to agents with heartbeat tracking for crash recovery.
+
+```bash
+# Show current issue assignments
+globallm assign status
+
+# Show assignments for a specific agent
+globallm assign status --agent-id hostname-1234-abc12345
+
+# Show only stale assignments (no heartbeat for 30+ minutes)
+globallm assign status --stale
+
+# Release all assignments for a specific agent
+globallm assign release hostname-1234-abc12345
+
+# Clean up stale assignments (timeout in minutes)
+globallm assign cleanup --timeout-minutes 30
+```
+
+**Assignment States:**
+- `available` - Issue is available to be claimed
+- `assigned` - Issue is currently assigned to an agent
+- `completed` - Issue was successfully completed (removed from pool)
+- `failed` - Issue processing failed (released back to available)
+
+**Heartbeat Timeout:** Assignments are automatically released if no heartbeat is received for 30 minutes (configurable via `GLOBALLM_HEARTBEAT_TIMEOUT`).
 
 ### Analyze User
 
@@ -414,6 +453,7 @@ src/globallm/
 ├── filtering/       # Health scoring and repository filtering
 ├── storage/         # PostgreSQL database persistence (repositories, issues)
 ├── models/          # Data models (Repository, Issue, Solution)
+├── agent/           # Agent identification and heartbeat management
 ├── cli/             # Command-line interface commands
 └── config/          # Configuration management with Pydantic
 ```
@@ -424,11 +464,11 @@ GlobalLM uses PostgreSQL with JSONB columns for flexible schema evolution:
 
 | Table       | Columns                          | Description                       |
 |-------------|----------------------------------|-----------------------------------|
-| `issues`    | repository, number, data (JSONB) | Prioritized issues with metadata  |
+| `issues`    | repository, number, data (JSONB), assigned_to, assigned_at, last_heartbeat_at, assignment_status | Prioritized issues with assignment tracking  |
 | `repositories` | name, data (JSONB), worth_working_on | Discovered repos with analysis  |
 | `schema_migrations` | version, applied_at        | Database schema version tracking  |
 
-Indexes on `repository`, `name`, and JSONB data fields enable efficient querying across 20-100 concurrent processes.
+Indexes on `repository`, `name`, `assignment_status`, `assigned_to`, and JSONB data fields enable efficient querying across 20-100 concurrent processes.
 
 ## Development
 
