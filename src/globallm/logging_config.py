@@ -62,7 +62,9 @@ def configure_logging(level: int = logging.INFO) -> None:
     root_logger = logging.getLogger()
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
-    root_logger.setLevel(logging.DEBUG)  # Root must be DEBUG to allow file handler to capture everything
+    root_logger.setLevel(
+        logging.DEBUG
+    )  # Root must be DEBUG to allow file handler to capture everything
 
     # Silence noisy loggers
     logging.getLogger("github").setLevel(logging.WARNING)

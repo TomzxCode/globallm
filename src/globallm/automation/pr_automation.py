@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from github import Github
-from github.Branch import Branch
-from github.GitCommit import GitCommit
 from github.GitRef import GitRef
 from github.GithubException import GithubException
 from github.Repository import Repository
@@ -35,6 +33,7 @@ class PRCreationResult:
     auto_merge_enabled: bool = False
     error: str | None = None
     warnings: list[str] = field(default_factory=list)
+
 
 class PRAutomation:
     """Automate PR creation and management."""

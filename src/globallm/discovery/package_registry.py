@@ -48,10 +48,15 @@ class PackageRegistryClient:
             self._client.close()
             self._client = None
 
-    def _check_disabled_response(self, data: dict | list, platform: str, package: str) -> bool:
+    def _check_disabled_response(
+        self, data: dict | list, platform: str, package: str
+    ) -> bool:
         """Check if the response indicates the endpoint is disabled."""
         global _libraries_io_warning_logged
-        if isinstance(data, dict) and data.get("message") == "Disabled for performance reasons":
+        if (
+            isinstance(data, dict)
+            and data.get("message") == "Disabled for performance reasons"
+        ):
             if not _libraries_io_warning_logged:
                 logger.warning(
                     "libraries_io_dependents_disabled",
@@ -151,7 +156,9 @@ class PackageRegistryClient:
             response = client.get(url, params=self._get_params())
             if response.status_code == 200:
                 data = response.json()
-                if self._check_disabled_response(data, "maven", f"{group_id}:{artifact_id}"):
+                if self._check_disabled_response(
+                    data, "maven", f"{group_id}:{artifact_id}"
+                ):
                     return 0
                 return len(data) if isinstance(data, list) else 0
             elif response.status_code == 403 and not self.api_key:
@@ -264,7 +271,9 @@ class DependentFinder:
     """
 
     def __init__(
-        self, api_key: str | None = None, registry_client: PackageRegistryClient | None = None
+        self,
+        api_key: str | None = None,
+        registry_client: PackageRegistryClient | None = None,
     ) -> None:
         if registry_client:
             self.registry_client = registry_client

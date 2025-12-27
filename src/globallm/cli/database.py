@@ -44,7 +44,9 @@ def migrate() -> None:
 
     if not pending:
         rprint("[green]No pending migrations.[/green]")
-        rprint(f"  Current schema version: [cyan]{get_status().get('schema_version', 'Unknown')}[/cyan]")
+        rprint(
+            f"  Current schema version: [cyan]{get_status().get('schema_version', 'Unknown')}[/cyan]"
+        )
         raise typer.Exit(0)
 
     rprint(f"[cyan]Found {len(pending)} pending migration(s):[/cyan]")
@@ -55,7 +57,9 @@ def migrate() -> None:
     try:
         run_migrations()
         rprint("[green]Migrations completed successfully![/green]")
-        rprint(f"  New schema version: [cyan]{get_status().get('schema_version', 'Unknown')}[/cyan]")
+        rprint(
+            f"  New schema version: [cyan]{get_status().get('schema_version', 'Unknown')}[/cyan]"
+        )
     except Exception as e:
         rprint(f"[red]Migration failed: {e}[/red]")
         raise typer.Exit(1)

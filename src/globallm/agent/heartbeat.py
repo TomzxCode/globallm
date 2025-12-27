@@ -55,9 +55,7 @@ class HeartbeatManager:
         self._stop_event.clear()
 
         if self._thread is None or not self._thread.is_alive():
-            self._thread = threading.Thread(
-                target=self._heartbeat_loop, daemon=True
-            )
+            self._thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
             self._thread.start()
             logger.info(
                 "heartbeat_monitoring_started",

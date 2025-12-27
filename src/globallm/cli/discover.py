@@ -24,7 +24,9 @@ def discover(
     min_dependents: int = typer.Option(None, help="Minimum dependents"),
     max_results: int = typer.Option(20, help="Max results to return"),
     use_cache: bool = typer.Option(True, help="Use cache"),
-    library_only: bool = typer.Option(True, help="Only include libraries (filter out apps, docs, etc.)"),
+    library_only: bool = typer.Option(
+        True, help="Only include libraries (filter out apps, docs, etc.)"
+    ),
 ) -> None:
     """Discover repositories by domain and language.
 
@@ -83,7 +85,9 @@ def discover(
     _save_to_store(store, results, rprint)
 
 
-def _save_to_store(store: RepositoryStore, results: list[RepoMetrics], rprint: Callable) -> None:
+def _save_to_store(
+    store: RepositoryStore, results: list[RepoMetrics], rprint: Callable
+) -> None:
     """Save discovered repositories to store, merging with existing.
 
     Existing repos that have been analyzed (worth_working_on is set) are preserved.

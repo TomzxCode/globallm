@@ -16,7 +16,9 @@ app = typer.Typer(name="assign", help="Manage issue assignments")
 @app.command()
 def status(
     agent_id: str = typer.Option(None, help="Filter by agent ID"),
-    stale_only: bool = typer.Option(False, "--stale", help="Show only stale assignments"),
+    stale_only: bool = typer.Option(
+        False, "--stale", help="Show only stale assignments"
+    ),
 ) -> None:
     """Show current issue assignments."""
     with get_connection() as conn:
@@ -59,7 +61,9 @@ def status(
         for a in assignments:
             # Calculate heartbeat age
             if a["last_heartbeat_at"]:
-                age = (datetime.now(a["last_heartbeat_at"].tzinfo) - a["last_heartbeat_at"]).seconds
+                age = (
+                    datetime.now(a["last_heartbeat_at"].tzinfo) - a["last_heartbeat_at"]
+                ).seconds
                 heartbeat_age = f"{age // 60}m ago"
             else:
                 heartbeat_age = "Never"

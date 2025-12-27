@@ -174,9 +174,19 @@ class Issue:
             raw_reactions = issue.reactions
             if isinstance(raw_reactions, dict):
                 # Skip non-reaction keys like "url" and "total_count"
-                reaction_keys = {"+1", "-1", "laugh", "hooray", "confused", "eyes", "rocket", "heart"}
+                reaction_keys = {
+                    "+1",
+                    "-1",
+                    "laugh",
+                    "hooray",
+                    "confused",
+                    "eyes",
+                    "rocket",
+                    "heart",
+                }
                 reactions = {
-                    k: v for k, v in raw_reactions.items()
+                    k: v
+                    for k, v in raw_reactions.items()
                     if k in reaction_keys and isinstance(v, int) and v > 0
                 }
 

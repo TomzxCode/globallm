@@ -49,7 +49,9 @@ class EnhancedDiscoverer(GitHubScanner):
         config = load_config()
         api_key = config.libraries_io_api_key
 
-        self.dependent_finder = DependentFinder(api_key=api_key) if enable_dependent_lookup else None
+        self.dependent_finder = (
+            DependentFinder(api_key=api_key) if enable_dependent_lookup else None
+        )
         self.health_scorer = HealthScorer()
         self.repo_filter = RepositoryFilter(self.health_scorer)
         self.enable_dependent_lookup = enable_dependent_lookup

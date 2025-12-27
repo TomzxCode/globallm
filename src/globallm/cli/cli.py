@@ -16,6 +16,7 @@ app = typer.Typer(
 def config_callback(log_level: str) -> None:
     """Configure logging based on log level."""
     from globallm.logging_config import configure_logging  # noqa: PLC0415
+
     level_int = getattr(logging, log_level.upper(), logging.INFO)
     configure_logging(level_int)
 
@@ -80,6 +81,7 @@ app.add_typer(budget.app, rich_help_panel="Command Groups")
 app.add_typer(config.app, rich_help_panel="Command Groups")
 app.add_typer(database.app, rich_help_panel="Command Groups")
 app.add_typer(repos.app, rich_help_panel="Command Groups")
+
 
 # Legacy argparse support for backward compatibility
 def parse_args():

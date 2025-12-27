@@ -57,7 +57,11 @@ def prioritize(
         raise typer.Exit(1)
 
     # Extract repo names
-    repos = [cast(str, r.get("name")) for r in approved_repos if isinstance(r.get("name"), str)]
+    repos = [
+        cast(str, r.get("name"))
+        for r in approved_repos
+        if isinstance(r.get("name"), str)
+    ]
 
     if language:
         # Filter by language

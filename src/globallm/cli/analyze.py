@@ -15,7 +15,10 @@ app = typer.Typer(help="Analyze repositories")
 
 @app.command()
 def analyze(
-    repo: str | None = typer.Argument(None, help="Repository name (owner/repo), or analyze all unanalyzed repositories if not specified"),
+    repo: str | None = typer.Argument(
+        None,
+        help="Repository name (owner/repo), or analyze all unanalyzed repositories if not specified",
+    ),
     include_dependents: bool = typer.Option(False, help="Include dependent analysis"),
 ) -> None:
     """Analyze a repository or all unanalyzed repositories.
@@ -34,7 +37,9 @@ def analyze(
             rprint("[dim]No unanalyzed repositories found.[/dim]")
             return
 
-        rprint(f"[bold cyan]Found {len(unanalyzed)} unanalyzed repositories[/bold cyan]")
+        rprint(
+            f"[bold cyan]Found {len(unanalyzed)} unanalyzed repositories[/bold cyan]"
+        )
         for repo_dict in unanalyzed:
             repo_name = repo_dict.get("name")
             if repo_name:
@@ -63,7 +68,9 @@ def _analyze_single(repo: str, store: RepositoryStore, rprint: Callable) -> None
     worth_working_on = health_score > 0.5 and impact_score > 0.5
 
     # Generate analysis reason
-    analysis_reason = _generate_analysis_reason(health_score, impact_score, worth_working_on)
+    analysis_reason = _generate_analysis_reason(
+        health_score, impact_score, worth_working_on
+    )
 
     # Display results
     rprint("\n[bold]Repository Metrics[/bold]")
@@ -76,8 +83,12 @@ def _analyze_single(repo: str, store: RepositoryStore, rprint: Callable) -> None
 
     # Display analysis results
     rprint("\n[bold]Analysis[/bold]")
-    health_color = "green" if health_score > 0.5 else "yellow" if health_score > 0.3 else "red"
-    impact_color = "green" if impact_score > 0.5 else "yellow" if impact_score > 0.3 else "red"
+    health_color = (
+        "green" if health_score > 0.5 else "yellow" if health_score > 0.3 else "red"
+    )
+    impact_color = (
+        "green" if impact_score > 0.5 else "yellow" if impact_score > 0.3 else "red"
+    )
     rprint(f"  Health Score: [{health_color}]{health_score:.1%}[/{health_color}]")
     rprint(f"  Impact Score: [{impact_color}]{impact_score:.1%}[/{impact_color}]")
 
@@ -89,7 +100,16 @@ def _analyze_single(repo: str, store: RepositoryStore, rprint: Callable) -> None
     rprint(f"  [dim]Reason: {analysis_reason}[/dim]")
 
     # Update repository store
-    _update_store(store, repo, metrics, health_score, impact_score, worth_working_on, analysis_reason, rprint)
+    _update_store(
+        store,
+        repo,
+        metrics,
+        health_score,
+        impact_score,
+        worth_working_on,
+        analysis_reason,
+        rprint,
+    )
 
 
 def _calculate_health_score(metrics) -> float:
@@ -112,7 +132,9 @@ def _calculate_impact_score(metrics) -> float:
     return stars_score * 0.5 + forks_score * 0.3 + watchers_score * 0.2
 
 
-def _generate_analysis_reason(health: float, impact: float, worth_working_on: bool) -> str:
+def _generate_analysis_reason(
+    health: float, impact: float, worth_working_on: bool
+) -> str:
     """Generate human-readable analysis reason."""
     health_pct = f"{health:.0%}"
     impact_pct = f"{impact:.0%}"

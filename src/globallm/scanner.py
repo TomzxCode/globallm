@@ -517,7 +517,11 @@ class GitHubScanner:
                 # Keep it if we can't check
                 filtered.append(metrics)
 
-        logger.info("libraries_filtered", kept=len(filtered), removed=len(results) - len(filtered))
+        logger.info(
+            "libraries_filtered",
+            kept=len(filtered),
+            removed=len(results) - len(filtered),
+        )
         return filtered
 
     def _calculate_metrics(self, repo: Repository) -> RepoMetrics:

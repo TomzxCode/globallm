@@ -15,7 +15,9 @@ app = typer.Typer(name="repos", help="Manage stored repositories")
 
 @app.command()
 def list(
-    filter: str = typer.Option("all", help="Filter: all, approved, rejected, unanalyzed"),
+    filter: str = typer.Option(
+        "all", help="Filter: all, approved, rejected, unanalyzed"
+    ),
     limit: int = typer.Option(50, help="Max results to show"),
 ) -> None:
     """List stored repositories.

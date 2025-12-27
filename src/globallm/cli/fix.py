@@ -16,7 +16,8 @@ app = typer.Typer(help="Analyze an issue and generate a fix")
 @app.command()
 def fix(
     issue_url: str = typer.Option(
-        None, help="GitHub issue URL (optional - if not provided, works on highest priority available issue)"
+        None,
+        help="GitHub issue URL (optional - if not provided, works on highest priority available issue)",
     ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Don't actually create PR"),
     auto_merge: bool = typer.Option(True, help="Enable auto-merge if safe"),
@@ -57,12 +58,16 @@ def fix(
         issue_dict = issue_store.get_issue(repo, issue_number)
         if not issue_dict:
             rprint(f"[red]Issue #{issue_number} not found in issue store[/red]")
-            rprint("[yellow]Run 'globallm prioritize' first to populate the issue store[/yellow]")
+            rprint(
+                "[yellow]Run 'globallm prioritize' first to populate the issue store[/yellow]"
+            )
             raise typer.Exit(1)
 
         # Attempt assignment
         if not issue_store.assign_issue(repo, issue_number, agent.agent_id):
-            rprint(f"[red]Issue #{issue_number} is already assigned to another agent[/red]")
+            rprint(
+                f"[red]Issue #{issue_number} is already assigned to another agent[/red]"
+            )
             raise typer.Exit(1)
 
         rprint(f"[bold cyan]Claimed issue #{issue_number} in {repo}[/bold cyan]")

@@ -258,7 +258,9 @@ class IssueStore:
                     status, assigned_to, last_heartbeat = result
 
                     # Check if issue is available, failed, or assignment is stale
-                    if status in ("available", "failed") or self._is_assignment_stale(last_heartbeat):
+                    if status in ("available", "failed") or self._is_assignment_stale(
+                        last_heartbeat
+                    ):
                         # Assign the issue
                         now = datetime.now()
                         cur.execute(
