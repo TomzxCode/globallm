@@ -273,7 +273,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "sentence-transformers" },
     { name = "structlog" },
     { name = "ty" },
     { name = "typer" },
@@ -285,6 +284,9 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
+]
+embeddings = [
+    { name = "sentence-transformers" },
 ]
 
 [package.metadata]
@@ -300,7 +302,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rich", specifier = ">=13.9.4" },
-    { name = "sentence-transformers", specifier = ">=5.2.0" },
     { name = "structlog", specifier = ">=25.5.0" },
     { name = "ty", specifier = ">=0.0.7" },
     { name = "typer", specifier = ">=0.15.1" },
@@ -313,6 +314,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.14.10" },
 ]
+embeddings = [{ name = "sentence-transformers", specifier = ">=5.2.0" }]
 
 [[package]]
 name = "h11"
