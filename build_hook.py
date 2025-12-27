@@ -13,14 +13,14 @@ class VersionMetadataHook(BuildHookInterface):
     def initialize(self, version: str, build_data: dict) -> None:
         """Initialize the build hook and write version metadata."""
         git_commit = self._get_git_commit()
-        metadata_path = os.path.join(
-            self.root, "src", "globallm", "_build_metadata.py"
-        )
+        metadata_path = os.path.join(self.root, "src", "globallm", "_build_metadata.py")
 
         with open(metadata_path, "w") as f:
             f.write(f'# Auto-generated during build\nGIT_COMMIT = "{git_commit}"\n')
 
-        build_data["force_include"]["src/globallm/_build_metadata.py"] = "globallm/_build_metadata.py"
+        build_data["force_include"]["src/globallm/_build_metadata.py"] = (
+            "globallm/_build_metadata.py"
+        )
 
     def _get_git_commit(self) -> str:
         """Get the current git commit hash."""
