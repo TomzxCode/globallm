@@ -2,9 +2,13 @@
 
 import os
 import re
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
+
+if TYPE_CHECKING:
+    from github import Github
 
 app = typer.Typer(help="Analyze an issue and generate a fix")
 
@@ -21,12 +25,15 @@ def fix(
     """Analyze an issue and generate a fix."""
     from globallm.agent.heartbeat import HeartbeatManager
     from globallm.agent.identity import AgentIdentity
+    from globallm.github import create_github_client
     from globallm.storage.issue_store import IssueStore
 
     token = os.getenv("GITHUB_TOKEN")
     if not token:
         rprint("[red]GITHUB_TOKEN required for PR creation[/red]")
         raise typer.Exit(1)
+
+    github_client = create_github_client(token)
 
     # Initialize components
     issue_store = IssueStore()
@@ -42,18 +49,19 @@ def fix(
             rprint("Expected: https://github.com/owner/repo/issues/123")
             raise typer.Exit(1)
 
-        owner, repo_name, issue_number = match.groups()
+        owner, repo_name, issue_number_str = match.groups()
         repo = f"{owner}/{repo_name}"
+        issue_number = int(issue_number_str)
 
         # Try to claim it if available
-        issue_dict = issue_store.get_issue(repo, int(issue_number))
+        issue_dict = issue_store.get_issue(repo, issue_number)
         if not issue_dict:
             rprint(f"[red]Issue #{issue_number} not found in issue store[/red]")
             rprint("[yellow]Run 'globallm prioritize' first to populate the issue store[/yellow]")
             raise typer.Exit(1)
 
         # Attempt assignment
-        if not issue_store.assign_issue(repo, int(issue_number), agent.agent_id):
+        if not issue_store.assign_issue(repo, issue_number, agent.agent_id):
             rprint(f"[red]Issue #{issue_number} is already assigned to another agent[/red]")
             raise typer.Exit(1)
 
@@ -68,7 +76,7 @@ def fix(
             raise typer.Exit(0)
 
         repo = issue_dict["repository"]
-        issue_number = issue_dict["number"]
+        issue_number = int(issue_dict["number"])
 
         rprint(f"[bold cyan]Claimed issue #{issue_number} in {repo}[/bold cyan]")
         rprint(f"  Title: {issue_dict.get('title', 'N/A')}")
@@ -79,7 +87,7 @@ def fix(
 
     try:
         _process_issue(
-            repo, issue_number, token, dry_run, auto_merge, branch, agent
+            repo, issue_number, github_client, dry_run, auto_merge, branch, agent
         )
         # Mark as completed
         issue_store.release_issue(repo, issue_number, agent.agent_id, "completed")
@@ -97,7 +105,7 @@ def fix(
 def _process_issue(
     repo: str,
     issue_number: int,
-    token: str,
+    github_client: Github,
     dry_run: bool,
     auto_merge: bool,
     branch: str,
@@ -106,7 +114,6 @@ def _process_issue(
     """Process an issue (existing logic from original fix command)."""
     from globallm.automation.pr_automation import PRAutomation
     from globallm.budget.budget_manager import BudgetManager
-    from globallm.github import create_github_client
     from globallm.issues.analyzer import IssueAnalyzer
     from globallm.issues.fetcher import IssueFetcher
     from globallm.llm.claude import ClaudeLLM
@@ -128,7 +135,6 @@ def _process_issue(
     engine = SolutionEngine(analyzer=analyzer, code_generator=code_generator)
 
     # Fetch the issue
-    github_client = create_github_client(token)
     fetcher = IssueFetcher(github_client)
     issue = fetcher.fetch_single_issue(repo, issue_number)
 

@@ -2,7 +2,7 @@
 
 import signal
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 from pydantic import ValidationError
@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 # Global settings instance
 _global_settings: Settings | None = None
 _config_path: Path | None = None
-_reload_callbacks: list[callable] = []
+_reload_callbacks: list[Callable[[Settings | None, Settings | None], None]] = []
 
 
 def get_config_path() -> Path:
@@ -152,7 +152,7 @@ def reload_config() -> Settings:
     return _global_settings
 
 
-def on_reload(callback: callable) -> None:
+def on_reload(callback: Callable[[Settings | None, Settings | None], None]) -> None:
     """Register a callback to be called on config reload.
 
     Args:

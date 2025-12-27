@@ -5,7 +5,7 @@ multiple processes with proper connection lifecycle management.
 """
 
 import os
-from typing import Any
+from typing import Any, ContextManager
 
 import psycopg
 from psycopg_pool import ConnectionPool
@@ -83,7 +83,7 @@ class Database:
             logger.info("closed_connection_pool")
 
 
-def get_connection() -> psycopg.Connection[Any]:
+def get_connection() -> ContextManager[psycopg.Connection[Any]]:
     """Get a connection from the pool.
 
     Usage:
@@ -92,7 +92,7 @@ def get_connection() -> psycopg.Connection[Any]:
             pass
 
     Returns:
-        Connection object that should be used as context manager.
+        Connection context manager that yields a Connection object.
     """
     pool = Database.get_pool()
     return pool.connection()

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-
+from typing import TYPE_CHECKING
 
 from globallm.config.loader import load_config
 from globallm.discovery.package_registry import DependentFinder
@@ -11,6 +11,9 @@ from globallm.filtering.repo_filter import RepositoryFilter
 from globallm.logging_config import get_logger
 from globallm.models.repository import Language, RepoCandidate
 from globallm.scanner import GitHubScanner
+
+if TYPE_CHECKING:
+    from github import Github
 
 logger = get_logger(__name__)
 
@@ -37,11 +40,11 @@ class EnhancedDiscoverer(GitHubScanner):
 
     def __init__(
         self,
-        token: str | None = None,
+        github_client: Github,
         enable_dependent_lookup: bool = True,
         health_filter: bool = True,
     ) -> None:
-        super().__init__(token)
+        super().__init__(github_client)
         # Load config to get libraries.io API key
         config = load_config()
         api_key = config.libraries_io_api_key

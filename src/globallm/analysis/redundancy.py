@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
+from typing import Any
 
 import numpy as np
 
@@ -244,7 +245,7 @@ class RedundancyDetector:
 
     def cluster_repositories(
         self,
-        repos: list[dict[str, any]],
+        repos: list[dict[str, Any]],
         similarity_threshold: float = 0.75,
     ) -> list[ClusterResult]:
         """Cluster repositories by similarity.

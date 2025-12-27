@@ -104,6 +104,7 @@ class Solution:
     complexity: int = 5  # 1-10
     risk_level: RiskLevel = RiskLevel.MEDIUM
     status: SolutionStatus = SolutionStatus.DRAFT
+    language: str | None = None  # Programming language
 
     # Generation info
     generated_at: datetime = field(default_factory=datetime.now)

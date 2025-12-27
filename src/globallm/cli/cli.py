@@ -1,5 +1,6 @@
 """CLI for GlobalLM."""
 
+import logging
 from pathlib import Path
 
 import typer
@@ -15,7 +16,8 @@ app = typer.Typer(
 def config_callback(log_level: str) -> None:
     """Configure logging based on log level."""
     from globallm.logging_config import configure_logging  # noqa: PLC0415
-    configure_logging(log_level)
+    level_int = getattr(logging, log_level.upper(), logging.INFO)
+    configure_logging(level_int)
 
 
 @app.callback()

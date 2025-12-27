@@ -1,10 +1,12 @@
 """PR automation with auto-merge capability."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from github import Github
 from github.Branch import Branch
+from github.GitCommit import GitCommit
+from github.GitRef import GitRef
 from github.GithubException import GithubException
 from github.Repository import Repository
 
@@ -32,12 +34,7 @@ class PRCreationResult:
     pr_url: str | None = None
     auto_merge_enabled: bool = False
     error: str | None = None
-    warnings: list[str] = None
-
-    def __post_init__(self) -> None:
-        if self.warnings is None:
-            self.warnings = []
-
+    warnings: list[str] = field(default_factory=list)
 
 class PRAutomation:
     """Automate PR creation and management."""
@@ -189,7 +186,7 @@ class PRAutomation:
 
     def _create_branch(
         self, repo: Repository, branch_name: str, base_branch: str
-    ) -> Branch:
+    ) -> GitRef:
         """Create a new branch from base.
 
         Args:
@@ -221,14 +218,14 @@ class PRAutomation:
 
         # Get latest commit on branch
         branch = repo.get_branch(branch_name)
-        latest_commit = branch.commit
+        latest_commit = repo.get_git_commit(branch.commit.sha)
         base_tree = repo.get_git_tree(latest_commit.sha)
 
         # Create tree elements
         tree_elements = []
         for patch in solution.patches:
             # Create blob for file
-            blob = repo.create_git_blob(content=patch.new_content)
+            blob = repo.create_git_blob(content=patch.new_content, encoding="utf-8")
             tree_elements.append(
                 InputGitTreeElement(
                     path=patch.file_path, mode="100644", type="blob", sha=blob.sha
@@ -236,14 +233,14 @@ class PRAutomation:
             )
 
         # Create tree
-        tree = repo.create_git_tree(tree_elements, base_tree.sha)
+        tree = repo.create_git_tree(tree_elements, base_tree)
 
         # Create commit
         author = InputGitAuthor(name="GlobalLM", email="noreply@globallm.dev")
         commit = repo.create_git_commit(
             message=f"Fix: {solution.issue_title}\n\n{solution.description}",
-            tree=tree.sha,
-            parents=[latest_commit.sha],
+            tree=tree,
+            parents=[latest_commit],
             author=author,
         )
 
@@ -280,7 +277,7 @@ This PR is ready for auto-merge when all CI checks pass.
 Once all CI checks pass, this PR can be automatically merged.
 """
 
-            pr.create_comment(comment)
+            pr.create_issue_comment(comment)
 
             logger.info(
                 "auto_merge_comment_added",
@@ -365,7 +362,7 @@ This PR has failing CI checks:
 Please fix the issues and push a new commit.
 """
 
-        issue_comment = pr.create_comment(comment)
+        issue_comment = pr.create_issue_comment(comment)
 
         logger.info(
             "ci_failure_comment_added",

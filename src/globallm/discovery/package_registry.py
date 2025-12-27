@@ -29,7 +29,7 @@ class PackageRegistryClient:
     def __init__(self, api_key: str | None = None, timeout: float = 10.0) -> None:
         self.api_key = api_key
         self.timeout = timeout
-        self._client: httpx.AsyncClient | None = None
+        self._client: httpx.Client | None = None
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:

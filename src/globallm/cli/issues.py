@@ -39,12 +39,14 @@ def issues(
 
     # Analyze issues if we have an LLM configured
     if os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"):
-        analyzer = IssueAnalyzer()
+        from globallm.llm.claude import ClaudeLLM
+
+        llm = ClaudeLLM()
+        analyzer = IssueAnalyzer(llm)
         rprint("\n[yellow]Analyzing issues with LLM...[/yellow]")
         for issue in issues:
-            analyzed = analyzer.analyze_issue(issue)
+            analyzed = analyzer.categorize_issue(issue)
             issue.category = analyzed.category
-            issue.severity = analyzed.severity
             issue.complexity = analyzed.complexity
 
     # Sort issues

@@ -1,7 +1,7 @@
 """Prioritize command."""
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import typer
 from rich import print as rprint
@@ -57,11 +57,14 @@ def prioritize(
         raise typer.Exit(1)
 
     # Extract repo names
-    repos = [r.get("name") for r in approved_repos if r.get("name")]
+    repos = [cast(str, r.get("name")) for r in approved_repos if isinstance(r.get("name"), str)]
 
     if language:
         # Filter by language
         repos = [r for r in repos if _get_repo_language(store, r) == language]
+
+    # Filter out None values (should be redundant but type-safe)
+    repos = [r for r in repos if r is not None]
 
     if not repos:
         rprint("[yellow]No repositories matching criteria[/yellow]")

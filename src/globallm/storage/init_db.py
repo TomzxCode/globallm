@@ -151,10 +151,12 @@ def get_status() -> dict[str, Any]:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT COUNT(*) FROM issues")
-                status["issues_count"] = cur.fetchone()[0]
+                row = cur.fetchone()
+                status["issues_count"] = row[0] if row else 0
 
                 cur.execute("SELECT COUNT(*) FROM repositories")
-                status["repositories_count"] = cur.fetchone()[0]
+                row = cur.fetchone()
+                status["repositories_count"] = row[0] if row else 0
     except Exception as e:
         status["error"] = str(e)
 
