@@ -8,6 +8,8 @@ from typing import Any
 
 import structlog
 
+from globallm.version import GIT_COMMIT
+
 
 def configure_logging(level: int = logging.INFO) -> None:
     """Configure structlog for the application.
@@ -64,6 +66,10 @@ def configure_logging(level: int = logging.INFO) -> None:
 
     # Silence noisy loggers
     logging.getLogger("github").setLevel(logging.WARNING)
+
+    # Log git commit once at startup
+    logger = structlog.get_logger(__name__)
+    logger.info("GlobalLM starting", git_commit=GIT_COMMIT or "unknown")
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
