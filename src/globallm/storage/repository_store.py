@@ -353,3 +353,30 @@ class RepositoryStore:
         except Exception as e:
             logger.error("failed_to_get_unanalyzed", error=str(e))
             return []
+
+    def delete_repository(self, name: str) -> bool:
+        """Delete a repository from storage.
+
+        Args:
+            name: Repository name (owner/repo).
+
+        Returns:
+            True if repository was deleted, False if not found.
+        """
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        DELETE FROM repositories WHERE name = %s
+                    """,
+                        (name,),
+                    )
+                    deleted = cur.rowcount > 0
+                conn.commit()
+                if deleted:
+                    logger.info("deleted_repository", name=name)
+                return deleted
+        except Exception as e:
+            logger.error("failed_to_delete_repository", name=name, error=str(e))
+            raise

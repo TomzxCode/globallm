@@ -172,13 +172,8 @@ def remove(
         rprint(f"[red]Repository '{repo}' not found in store[/red]")
         raise typer.Exit(1)
 
-    # Load all repos, remove the specified one
-    repos = store.load_repositories()
-    repos = [r for r in repos if r.get("name") != repo]
-
-    # Save back
-    from datetime import datetime
-
-    store.save_repositories(repos, discovered_at=datetime.now())
+    if not store.delete_repository(repo):
+        rprint(f"[red]Failed to remove '{repo}' from store[/red]")
+        raise typer.Exit(1)
 
     rprint(f"[green]Removed '{repo}' from store[/green]")
