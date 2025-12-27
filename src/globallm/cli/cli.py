@@ -6,10 +6,21 @@ from pathlib import Path
 import typer
 from dotenv import load_dotenv
 
+from globallm.version import get_git_commit  # noqa: PLC0415
+
+
+def _version_callback() -> str:
+    """Get version string."""
+    commit = get_git_commit()
+    return commit if commit else "unknown"
+
+
 app = typer.Typer(
     name="globallm",
     help="Scan GitHub to identify impactful libraries and contribute to their success",
     no_args_is_help=True,
+    add_completion=False,
+    rich_markup_mode="rich",
 )
 
 
@@ -21,9 +32,34 @@ def config_callback(log_level: str) -> None:
     configure_logging(level_int)
 
 
+def _exit_with_version(value: bool) -> None:
+    """Exit with version information."""
+    if value:
+        import contextlib
+        import io
+        import os
+
+        # Redirect stdout/stderr to suppress all logging output
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+            io.StringIO()
+        ):
+            version = _version_callback()
+        # Write version directly to stdout fd to bypass any redirection
+        os.write(1, (version + "\n").encode())
+        raise typer.Exit()
+
+
 @app.callback()
 def main(
     ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show version and exit",
+        is_eager=True,
+        callback=lambda x: _exit_with_version(x),
+    ),
     log_level: str = typer.Option(
         "INFO",
         "--log-level",
