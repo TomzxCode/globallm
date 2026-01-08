@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Repository Discovery feature enables GlobalLM to search and identify high-value open source repositories across multiple domains and programming languages. It serves as the entry point for the contribution pipeline by finding repositories where AI agents can have meaningful impact.
+The Repository Discovery feature enables GlobaLLM to search and identify high-value open source repositories across multiple domains and programming languages. It serves as the entry point for the contribution pipeline by finding repositories where AI agents can have meaningful impact.
 
 ## Requirements
 

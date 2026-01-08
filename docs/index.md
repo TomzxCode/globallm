@@ -1,10 +1,10 @@
-# GlobalLM
+# GlobaLLM
 
 AI-powered open source contribution orchestration at scale.
 
 ## Overview
 
-GlobalLM is a system for identifying the most impactful open source libraries and contributing to their success using autonomous AI agents. It solves the resource allocation problem: with unlimited access to hyper-competent LLMs and finite compute, how do you maximize positive impact on the software ecosystem?
+GlobaLLM is a system for identifying the most impactful open source libraries and contributing to their success using autonomous AI agents. It solves the resource allocation problem: with unlimited access to hyper-competent LLMs and finite compute, how do you maximize positive impact on the software ecosystem?
 
 ## Key Features
 
@@ -30,7 +30,7 @@ GlobalLM is a system for identifying the most impactful open source libraries an
 
 ## Ultimate Goals
 
-Thinking at the highest level, GlobalLM aims to tackle problems that are fundamentally social:
+Thinking at the highest level, GlobaLLM aims to tackle problems that are fundamentally social:
 
 - Reduce the wealth gap
 - Reduce homelessness

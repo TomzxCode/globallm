@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Agent Coordination feature enables multiple GlobalLM agents to run in parallel without conflicts. It manages issue assignments, tracks agent heartbeats for crash recovery, and ensures each agent works on unique issues.
+The Agent Coordination feature enables multiple GlobaLLM agents to run in parallel without conflicts. It manages issue assignments, tracks agent heartbeats for crash recovery, and ensures each agent works on unique issues.
 
 ## Requirements
 

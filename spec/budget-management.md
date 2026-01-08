@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Budget Management feature tracks and controls LLM token usage to manage costs when running GlobalLM at scale. It provides visibility into resource consumption and enforces limits to prevent unexpected charges.
+The Budget Management feature tracks and controls LLM token usage to manage costs when running GlobaLLM at scale. It provides visibility into resource consumption and enforces limits to prevent unexpected charges.
 
 ## Requirements
 

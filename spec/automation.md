@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Automation feature enables GlobalLM to automatically merge safe pull requests and monitor CI/CD status. It removes human review bottlenecks for trusted, low-risk changes while maintaining quality through automated checks.
+The Automation feature enables GlobaLLM to automatically merge safe pull requests and monitor CI/CD status. It removes human review bottlenecks for trusted, low-risk changes while maintaining quality through automated checks.
 
 ## Requirements
 
