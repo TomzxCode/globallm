@@ -1,0 +1,56 @@
+site_name: GlobalLM
+site_description: AI-powered open source contribution orchestration at scale
+site_url: https://github.com/yourorg/globallm
+repo_url: https://github.com/yourorg/globallm
+
+nav:
+  - Home: index.md
+  - Specifications:
+    - Repository Discovery: spec/repository-discovery.md
+    - Health Scoring: spec/health-scoring.md
+    - Impact Analysis: spec/impact-analysis.md
+    - Issue Prioritization: spec/issue-prioritization.md
+    - Solution Generation: spec/solution-generation.md
+    - Budget Management: spec/budget-management.md
+    - Automation: spec/automation.md
+    - Agent Coordination: spec/agent-coordination.md
+    - Redundancy Detection: spec/redundancy-detection.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - mkdocstrings:
+      watch:
+        - src/globallm
