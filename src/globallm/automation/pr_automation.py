@@ -235,7 +235,7 @@ class PRAutomation:
         tree = repo.create_git_tree(tree_elements, base_tree)
 
         # Create commit
-        author = InputGitAuthor(name="GlobalLM", email="noreply@globallm.dev")
+        author = InputGitAuthor(name="GlobaLLM", email="noreply@globallm.dev")
         commit = repo.create_git_commit(
             message=f"Fix: {solution.issue_title}\n\n{solution.description}",
             tree=tree,

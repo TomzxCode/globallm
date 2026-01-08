@@ -1,4 +1,4 @@
-"""CLI for GlobalLM."""
+"""CLI for GlobaLLM."""
 
 import logging
 from pathlib import Path
@@ -74,7 +74,7 @@ def main(
         help="Path to config file",
     ),
 ) -> None:
-    """GlobalLM - AI-powered open source contribution tool."""
+    """GlobaLLM - AI-powered open source contribution tool."""
     load_dotenv()
 
     # Load config if specified

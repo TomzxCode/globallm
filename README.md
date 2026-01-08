@@ -1,14 +1,14 @@
-# GlobalLM
+# GlobaLLM
 
 > AI-powered open source contribution orchestration at scale
 
-GlobalLM is a system for identifying the most impactful open source libraries and contributing to their success using autonomous AI agents. It solves the resource allocation problem: with unlimited access to hyper-competent LLMs and finite compute, how do you maximize positive impact on the software ecosystem?
+GlobaLLM is a system for identifying the most impactful open source libraries and contributing to their success using autonomous AI agents. It solves the resource allocation problem: with unlimited access to hyper-competent LLMs and finite compute, how do you maximize positive impact on the software ecosystem?
 
 ## Vision
 
 The core insight: when AI agents have access to all GitHub repositories and can effectively address all existing open issues, the bottleneck becomes **prioritization**, not capability.
 
-GlobalLM provides:
+GlobaLLM provides:
 - **Impact analysis** to identify repositories where contributions matter most
 - **Budget controls** (time, tokens, cost) to allocate resources efficiently
 - **Monitoring dashboards** to observe agent progress with metrics and KPIs
@@ -25,7 +25,7 @@ GlobalLM provides:
 
 ### Ultimate Goals
 
-Thinking at the highest level, GlobalLM aims to tackle problems that are fundamentally social:
+Thinking at the highest level, GlobaLLM aims to tackle problems that are fundamentally social:
 
 - Reduce the wealth gap
 - Reduce homelessness
@@ -61,7 +61,7 @@ uv run globallm database init
 
 ### Database Setup
 
-GlobalLM uses PostgreSQL for data persistence. The `docker-compose.yml` file includes a PostgreSQL service:
+GlobaLLM uses PostgreSQL for data persistence. The `docker-compose.yml` file includes a PostgreSQL service:
 
 ```bash
 # Start PostgreSQL
@@ -76,7 +76,7 @@ docker-compose up -d --build
 
 ### Custom Database Connection
 
-By default, GlobalLM connects to `postgresql://globallm:globallm@localhost:5432/globallm`. To use a different database:
+By default, GlobaLLM connects to `postgresql://globallm:globallm@localhost:5432/globallm`. To use a different database:
 
 ```bash
 export GLOBALLM_DATABASE_URL="postgresql://user:pass@host:5432/dbname"
@@ -98,7 +98,7 @@ globallm config set github.token your_token_here
 
 ## Database Management
 
-Manage the GlobalLM database:
+Manage the GlobaLLM database:
 
 ```bash
 # Initialize database schema
@@ -114,7 +114,7 @@ globallm database migrate
 globallm database close
 ```
 
-**Migrations:** When you upgrade to a new version of GlobalLM, run `globallm database migrate` to apply any schema changes. Migrations are non-destructive and preserve your existing data.
+**Migrations:** When you upgrade to a new version of GlobaLLM, run `globallm database migrate` to apply any schema changes. Migrations are non-destructive and preserve your existing data.
 
 ## Usage
 
@@ -191,7 +191,7 @@ flowchart TD
 
 ### Configuration Management
 
-Manage GlobalLM settings including filters, API tokens, and thresholds. Use this to customize how the tool discovers and evaluates repositories.
+Manage GlobaLLM settings including filters, API tokens, and thresholds. Use this to customize how the tool discovers and evaluates repositories.
 
 ```bash
 # Show all configuration
@@ -460,7 +460,7 @@ src/globallm/
 
 ### Database Schema
 
-GlobalLM uses PostgreSQL with JSONB columns for flexible schema evolution:
+GlobaLLM uses PostgreSQL with JSONB columns for flexible schema evolution:
 
 | Table       | Columns                          | Description                       |
 |-------------|----------------------------------|-----------------------------------|

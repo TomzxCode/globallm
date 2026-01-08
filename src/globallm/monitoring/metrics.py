@@ -1,4 +1,4 @@
-"""Metrics collection for GlobalLM operations."""
+"""Metrics collection for GlobaLLM operations."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -187,7 +187,7 @@ registry = MetricsRegistry()
 
 
 class MetricsCollector:
-    """Collect metrics for GlobalLM operations."""
+    """Collect metrics for GlobaLLM operations."""
 
     def __init__(self, registry: MetricsRegistry = registry) -> None:
         """Initialize metrics collector.

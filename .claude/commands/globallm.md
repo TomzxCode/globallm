@@ -1,5 +1,5 @@
 ---
-description: Instruction for an autonomous agent using GlobalLM to maintain open source projects.
+description: Instruction for an autonomous agent using GlobaLLM to maintain open source projects.
 ---
 # Goals
 Your goals are the following:

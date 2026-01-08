@@ -1,4 +1,4 @@
-"""Database connection management for GlobalLM.
+"""Database connection management for GlobaLLM.
 
 Provides a singleton connection pool that can be safely used across
 multiple processes with proper connection lifecycle management.

@@ -1,4 +1,4 @@
-"""Version information for GlobalLM."""
+"""Version information for GlobaLLM."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""CLI dashboard for GlobalLM monitoring."""
+"""CLI dashboard for GlobaLLM monitoring."""
 
 from collections import defaultdict
 
@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 
 class Dashboard:
-    """CLI dashboard for GlobalLM status."""
+    """CLI dashboard for GlobaLLM status."""
 
     def __init__(
         self, console: Console | None = None, collector: MetricsCollector | None = None
@@ -53,7 +53,7 @@ class Dashboard:
         solutions_text = self._format_solutions_section(summary)
 
         # Combine all sections
-        content = f"""[bold cyan]GlobalLM Status Dashboard[/bold cyan]
+        content = f"""[bold cyan]GlobaLLM Status Dashboard[/bold cyan]
 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 {budget_text}
@@ -65,7 +65,7 @@ class Dashboard:
 {solutions_text}
 """
 
-        return Panel(content, title="GlobalLM", border_style="cyan")
+        return Panel(content, title="GlobaLLM", border_style="cyan")
 
     def _format_budget_section(self, summary: dict[str, float]) -> str:
         """Format budget section."""
@@ -254,7 +254,7 @@ class ReportGenerator:
         summary = self.collector.get_summary()
 
         lines = [
-            "# GlobalLM Daily Report",
+            "# GlobaLLM Daily Report",
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "",
             "## Summary",
@@ -300,7 +300,7 @@ class ReportGenerator:
             Report text
         """
         lines = [
-            "# GlobalLM Language Breakdown",
+            "# GlobaLLM Language Breakdown",
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "",
             "## By Language",

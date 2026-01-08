@@ -1,4 +1,4 @@
-"""Logging configuration for GlobalLM."""
+"""Logging configuration for GlobaLLM."""
 
 import logging
 import os
@@ -71,7 +71,7 @@ def configure_logging(level: int = logging.INFO) -> None:
 
     # Log git commit once at startup
     logger = structlog.get_logger(__name__)
-    logger.info("GlobalLM starting", git_commit=get_git_commit() or "unknown")
+    logger.info("GlobaLLM starting", git_commit=get_git_commit() or "unknown")
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:

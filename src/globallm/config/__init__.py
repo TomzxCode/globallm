@@ -1,1 +1,1 @@
-"""Configuration management for GlobalLM."""
+"""Configuration management for GlobaLLM."""

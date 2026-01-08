@@ -20,7 +20,7 @@ def status(
         _show_dashboard(config)
         return
 
-    rprint("[bold cyan]GlobalLM Status[/bold cyan]")
+    rprint("[bold cyan]GlobaLLM Status[/bold cyan]")
     rprint(f"  Log level: {config.log_level}")
     rprint(f"  LLM provider: {config.llm_provider}")
     rprint(f"  LLM model: {config.llm_model}")
@@ -45,7 +45,7 @@ def _show_dashboard(config) -> None:
 
     # Header panel
     header = Panel(
-        "[bold cyan]GlobalLM Status Dashboard[/bold cyan]\n"
+        "[bold cyan]GlobaLLM Status Dashboard[/bold cyan]\n"
         f"Budget: 0 / {config.budget.weekly_token_budget:,} tokens (0%)",
         title="Status",
     )
